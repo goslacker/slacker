@@ -2,7 +2,7 @@ package slicex
 
 import (
 	"errors"
-	"github.com/zedisdog/slacker/reflectx"
+	"github.com/goslacker/slacker/reflectx"
 	"reflect"
 	"strings"
 )

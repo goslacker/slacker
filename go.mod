@@ -1,3 +1,3 @@
-module github.com/zedisdog/slacker
+module github.com/goslacker/slacker
 
 go 1.22
