@@ -1,5 +1,10 @@
 package zhipu
 
+import (
+	"github.com/goslacker/slacker/ai"
+	"github.com/goslacker/slacker/tool"
+)
+
 type Property struct {
 	Type        string `json:"type"`
 	Description string `json:"description"`
@@ -109,18 +114,25 @@ type ChatCompletionReq struct {
 	UserID string `json:"user_id,omitempty"`
 }
 
+type FunctionCallInfo struct {
+	Name      string //函数名称
+	Arguments string //模型生成的调用函数的参数列表，json 格式。请注意，模型可能会生成无效的JSON，也可能会虚构一些不在您的函数规范中的参数。在调用函数之前，请在代码中验证这些参数是否有效。
+}
+
 type Message struct {
 	Role      string `json:"role"`              //消息的角色信息，此时应为system user assistant tool
 	Content   string `json:"content,omitempty"` //消息内容
 	ToolCalls []struct {
-		ID       string `json:"id"`   //工具id
-		Type     string `json:"type"` //工具类型,支持web_search、retrieval、function
-		Function *struct {
-			Name      string `json:"name"`      //函数名称
-			Arguments string `json:"arguments"` //模型生成的调用函数的参数列表，json 格式。请注意，模型可能会生成无效的JSON，也可能会虚构一些不在您的函数规范中的参数。在调用函数之前，请在代码中验证这些参数是否有效。
-		} `json:"function,omitempty"` //type为"function"时不为空
+		ID       string            `json:"id"`                 //工具id
+		Type     string            `json:"type"`               //工具类型,支持web_search、retrieval、function
+		Function *FunctionCallInfo `json:"function,omitempty"` //type为"function"时不为空
 	} `json:"tool_calls,omitempty"` //模型产生的工具调用消息
 	ToolCallID string `json:"tool_call_id,omitempty"` //tool的调用记录
+}
+
+func MessageFromStandard(m *ai.Message) (message *Message, err error) {
+	err = tool.SimpleMap(&message, m)
+	return
 }
 
 type Choice struct {

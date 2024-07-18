@@ -2,7 +2,7 @@ package slicex
 
 import (
 	"errors"
-	"github.com/goslacker/slacker/reflectx"
+	"github.com/goslacker/slacker/extend/reflectx"
 	"reflect"
 	"strings"
 )
@@ -37,7 +37,7 @@ func GetFieldSlice[T any](key string, target any) []T {
 	keys := strings.Split(key, ".")
 	for _, key := range keys {
 		for idx, item := range finds {
-			field := reflectx.FindField(item, key)
+			field := reflectx.Indirect(item, false).FieldByName(key)
 			if field.IsValid() {
 				finds[idx] = field
 			} else {
@@ -52,4 +52,15 @@ func GetFieldSlice[T any](key string, target any) []T {
 	}
 
 	return result
+}
+
+// SameItem 判断所有元素是否都相同
+func SameItem[T comparable](s ...T) bool {
+	for i := 0; i < len(s)-1; i++ {
+		if s[i] != s[i+1] {
+			return false
+		}
+	}
+
+	return true
 }

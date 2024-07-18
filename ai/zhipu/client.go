@@ -2,7 +2,7 @@ package zhipu
 
 import (
 	"fmt"
-	"github.com/goslacker/slacker/httpx/client"
+	"github.com/goslacker/slacker/extend/httpx/client"
 	"net/http"
 )
 
