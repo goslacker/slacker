@@ -14,7 +14,7 @@ func NewClient(apiKey string) *Client {
 		httpClient: client.NewClient(
 			client.WithBaseUrl(baseUrl),
 			client.WithHeader(http.Header{
-				"Authorization": {"bearer " + apiKey},
+				"Authorization": {"Bearer " + apiKey},
 				"Content-Type":  {"application/json"},
 			}),
 		),

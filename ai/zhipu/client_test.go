@@ -7,9 +7,9 @@ import (
 )
 
 func TestClient_ChatCompletion(t *testing.T) {
-	client := NewClient("")
+	client := NewClient("a68b1720a601bf60b0f1c45f38725874.PQDVOfBgtUHyTAI4")
 	resp, err := client.ChatCompletion(&ChatCompletionReq{
-		Model: "chatglm_pro",
+		Model: "glm-4-0520",
 		Messages: []Message{
 			{
 				Role:    "user",

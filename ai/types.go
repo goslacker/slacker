@@ -6,12 +6,12 @@ type FunctionCallInfo struct {
 }
 
 type Message struct {
-	Role      string //消息的角色信息，system user assistant tool
-	Content   string //消息内容
+	Role      string `json:"role"`    //消息的角色信息，system user assistant tool
+	Content   string `json:"content"` //消息内容
 	ToolCalls []struct {
 		ID       string            //id
 		Type     string            //类型
 		Function *FunctionCallInfo //function描述 type为"function"时不为空
-	} //模型产生的工具调用消息
-	ToolCallID string //tool的调用记录
+	} `json:"-"` //模型产生的工具调用消息
+	ToolCallID string `json:"-"` //tool的调用记录
 }

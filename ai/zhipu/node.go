@@ -12,7 +12,6 @@ type ZhipuNode struct {
 	SystemPrompt string
 	SaveHistory  bool
 	Model        string
-	NextID       string
 	Limit        int
 	*Client
 	getMessages func(limit int) (messages []ai.Message)

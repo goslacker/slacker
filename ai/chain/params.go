@@ -6,6 +6,12 @@ import (
 	"sync"
 )
 
+func NewParams() *Params {
+	return &Params{
+		params: make(map[string]map[string]any),
+	}
+}
+
 type Params struct {
 	Path   []string
 	params map[string]map[string]any
@@ -27,8 +33,8 @@ func (p *Params) Set(id, key string, value any) {
 	group[key] = value
 }
 
-func (p *Params) Get(partten string) any {
-	paramPath := strings.Split(partten, "/")
+func (p *Params) Get(pattern string) any {
+	paramPath := strings.Split(pattern, "/")
 	group, ok := p.params[paramPath[0]]
 	if !ok {
 		return nil

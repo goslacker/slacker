@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+func NewHistory() *History {
+	return &History{}
+}
+
 // History 负责记录聊天历史，**它不会记录第一条system prompt**
 type History struct {
 	MessageHistory []ai.Message
@@ -19,8 +23,12 @@ func (c *History) Set(messages ...ai.Message) {
 }
 
 func (c *History) Get(limit int) (history []ai.Message) {
-	start := len(c.MessageHistory) - 1 - limit
-	if start < 0 {
+	start := 0
+	if limit > 0 {
+		start = len(c.MessageHistory) - 1 - limit
+	}
+
+	if start <= 0 {
 		return c.MessageHistory
 	} else {
 		return c.MessageHistory[start:]
