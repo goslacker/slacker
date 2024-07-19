@@ -130,8 +130,13 @@ type Message struct {
 	ToolCallID string `json:"tool_call_id,omitempty"` //tool的调用记录
 }
 
-func MessageFromStandard(m *ai.Message) (message *Message, err error) {
-	err = tool.SimpleMap(&message, m)
+func MessagesFromStandard(m ...ai.Message) (messages []Message, err error) {
+	err = tool.SimpleMap(&messages, m)
+	return
+}
+
+func ToStandardMessages(messages ...Message) (m []ai.Message, err error) {
+	err = tool.SimpleMap(&m, messages)
 	return
 }
 

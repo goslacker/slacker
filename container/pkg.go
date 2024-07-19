@@ -1,16 +1,25 @@
 package container
 
-import "reflect"
-
-var (
-	def = NewContainer()
+import (
+	"reflect"
+	"sync"
 )
 
+var lock sync.Mutex
+var def *Container
+
 func Set(container *Container) {
+	lock.Lock()
+	defer lock.Unlock()
 	def = container
 }
 
 func Default() *Container {
+	lock.Lock()
+	defer lock.Unlock()
+	if def == nil {
+		def = NewContainer()
+	}
 	return def
 }
 
