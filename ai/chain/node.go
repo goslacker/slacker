@@ -1,11 +1,11 @@
 package chain
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type NodeInfo struct {
-	id     string //uuid
-	Name   string
-	NextID string
+	id string //uuid
 }
 
 func (m *NodeInfo) GetID() string {
@@ -15,10 +15,28 @@ func (m *NodeInfo) GetID() string {
 	return m.id
 }
 
-func (m NodeInfo) GetName() string {
-	return m.Name
+func WithNextID(id string) func(node *LLMNode) {
+	return func(node *LLMNode) {
+		node.nextID = id
+	}
 }
 
-func (m NodeInfo) GetNextID() string {
-	return m.NextID
+func WithParamKeys(paramKeys ...string) func(node *LLMNode) {
+	return func(node *LLMNode) {
+		node.paramKeys = paramKeys
+	}
+}
+
+func NewLLMNode(opts ...func(node *LLMNode)) *LLMNode {
+	n := &LLMNode{}
+	for _, opt := range opts {
+		opt(n)
+	}
+	return n
+}
+
+type LLMNode struct {
+	NodeInfo
+	nextID    string
+	paramKeys []string
 }

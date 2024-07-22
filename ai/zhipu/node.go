@@ -1,6 +1,7 @@
 package zhipu
 
 import (
+	"fmt"
 	"github.com/goslacker/slacker/ai"
 	"github.com/goslacker/slacker/ai/chain"
 )
@@ -16,17 +17,20 @@ type ZhipuNode struct {
 	*Client
 	getMessages func(limit int) (messages []ai.Message)
 	setMessages func(message ...ai.Message)
+	nextID      string
 }
 
-func (z *ZhipuNode) SetMessageHistoryGetter(f func(limit int) (messages []ai.Message)) {
-	z.getMessages = f
-}
+func (z ZhipuNode) Run(ctx chain.Context) (nextID string, err error) {
+	if z.SaveHistory {
+		if c, ok := ctx.(chain.ChatContext); ok {
+			z.getMessages = c.GetHistory
+			z.setMessages = c.SetHistory
+		} else {
+			err = fmt.Errorf("required chain.Context to manager history")
+			return
+		}
+	}
 
-func (z *ZhipuNode) SetMessageHistorySetter(f func(message ...ai.Message)) {
-	z.setMessages = f
-}
-
-func (z ZhipuNode) Run(params ai.Params) (nextID string, err error) {
 	var history []ai.Message
 	if z.SaveHistory {
 		history = z.getMessages(z.Limit)
@@ -40,7 +44,7 @@ func (z ZhipuNode) Run(params ai.Params) (nextID string, err error) {
 	}
 	history = append(history, ai.Message{
 		Role:    "user",
-		Content: params.Get(z.InKey).(string),
+		Content: ctx.GetParam(z.InKey).(string),
 	})
 	messages, err := MessagesFromStandard(history...)
 	if err != nil {
@@ -63,7 +67,7 @@ func (z ZhipuNode) Run(params ai.Params) (nextID string, err error) {
 		z.setMessages(history...)
 	}
 
-	params.Set(z.GetID(), z.OutKey, resp.Choices[0].Message.Content)
-	nextID = z.NextID
+	ctx.SetParam(z.GetID(), z.OutKey, resp.Choices[0].Message.Content)
+	nextID = z.nextID
 	return
 }

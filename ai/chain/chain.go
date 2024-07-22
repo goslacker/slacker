@@ -2,23 +2,22 @@ package chain
 
 import (
 	"fmt"
-	"github.com/goslacker/slacker/ai"
 )
 
-func NewChain() *Chain {
-	return &Chain{
-		nodes: make(map[string]ai.Node),
+func NewChain() Chain {
+	return &chain{
+		nodes: make(map[string]Node),
 	}
 }
 
-type Chain struct {
+type chain struct {
 	NodeInfo
-	nodes   map[string]ai.Node
+	nodes   map[string]Node
 	FirstID string
 	LastID  string
 }
 
-func (c *Chain) AddNodes(nodes ...ai.Node) {
+func (c *chain) AddNodes(nodes ...Node) {
 	for _, node := range nodes {
 		c.nodes[node.GetID()] = node
 	}
@@ -28,16 +27,16 @@ func (c *Chain) AddNodes(nodes ...ai.Node) {
 	return
 }
 
-func (c *Chain) Run(params ai.Params) (nextID string, err error) {
+func (c *chain) Run(ctx Context) (nextID string, err error) {
 	nodeID := c.FirstID
 	for {
 		node := c.nodes[nodeID]
-		nodeID, err = node.Run(params)
+		nodeID, err = node.Run(ctx)
 		if err != nil {
-			err = fmt.Errorf("run node <%s> failed: %w", node.GetName(), err)
+			err = fmt.Errorf("run node <%s> failed: %w", node.GetID(), err)
 			return
 		}
-		params.AfterNodeRun(node)
+		ctx.AfterNodeRun(node)
 		if node.GetID() == c.LastID {
 			return
 		}
@@ -52,11 +51,11 @@ func NewChatChain() *ChatChain {
 }
 
 type ChatChain struct {
-	*Chain
+	Chain
 	*History
 }
 
-func (c *ChatChain) AddNodes(nodes ...ai.Node) {
+func (c *ChatChain) AddNodes(nodes ...Node) {
 	for _, node := range nodes {
 		if n, ok := node.(CanSetMessageHistory); ok {
 			n.SetMessageHistorySetter(c.History.Set)
