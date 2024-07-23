@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"unsafe"
 )
 
 func TestClient_ChatCompletion(t *testing.T) {
-	client := NewClient("a68b1720a601bf60b0f1c45f38725874.PQDVOfBgtUHyTAI4")
+	client := NewClient("43fdee09f289c308c45390f7e7963a7a.YAg2csgsVqYAznyS")
 	resp, err := client.ChatCompletion(&ChatCompletionReq{
 		Model: "glm-4-0520",
 		Messages: []Message{
@@ -19,4 +20,8 @@ func TestClient_ChatCompletion(t *testing.T) {
 	})
 	require.NoError(t, err)
 	fmt.Printf("%+v\n", resp)
+}
+
+func TestNormal(t *testing.T) {
+	println(unsafe.Sizeof(ZhipuNode{}))
 }

@@ -1,73 +1,126 @@
 package zhipu
 
 import (
+	"errors"
 	"fmt"
 	"github.com/goslacker/slacker/ai"
 	"github.com/goslacker/slacker/ai/chain"
 )
 
-type ZhipuNode struct {
-	chain.NodeInfo
-	InKey        string
-	OutKey       string
-	SystemPrompt string
-	SaveHistory  bool
-	Model        string
-	Limit        int
-	*Client
-	getMessages func(limit int) (messages []ai.Message)
-	setMessages func(message ...ai.Message)
-	nextID      string
-}
-
-func (z ZhipuNode) Run(ctx chain.Context) (nextID string, err error) {
-	if z.SaveHistory {
-		if c, ok := ctx.(chain.ChatContext); ok {
-			z.getMessages = c.GetHistory
-			z.setMessages = c.SetHistory
+func WithParamKeys(paramKeys []string) func(n *ZhipuNode) {
+	return func(n *ZhipuNode) {
+		if len(n.paramKeys) > 0 {
+			n.paramKeys = append(n.paramKeys, paramKeys...)
 		} else {
-			err = fmt.Errorf("required chain.Context to manager history")
-			return
+			n.paramKeys = paramKeys
 		}
 	}
+}
 
+func WithEnableHistory() func(n *ZhipuNode) {
+	return func(n *ZhipuNode) {
+		n.enableHistory = true
+	}
+}
+
+func WithLimit(limit int) func(n *ZhipuNode) {
+	return func(n *ZhipuNode) {
+		n.limit = limit
+	}
+}
+
+func WithTemperature(temperature float32) func(n *ZhipuNode) {
+	if temperature <= 0 || temperature > 1 {
+		panic(errors.New("temperature can only gt 0 and lt 1"))
+	}
+	return func(n *ZhipuNode) {
+		n.temperature = temperature
+	}
+}
+
+func WithNextID(nextID string) func(n *ZhipuNode) {
+	return func(n *ZhipuNode) {
+		n.nextID = nextID
+	}
+}
+
+func NewZhipuNode(promptTpl string, model string, apiKey string, inputKey string, opts ...func(n *ZhipuNode)) *ZhipuNode {
+	z := &ZhipuNode{
+		client:    NewClient(apiKey),
+		promptTpl: promptTpl,
+		model:     model,
+		inputKey:  inputKey,
+		outputKey: "result",
+		paramKeys: []string{inputKey},
+	}
+	for _, opt := range opts {
+		opt(z)
+	}
+
+	return z
+}
+
+type ZhipuNode struct {
+	chain.NodeInfo
+	client        *Client
+	paramKeys     []string
+	enableHistory bool
+	limit         int
+	inputKey      string
+	promptTpl     string
+	model         string
+	temperature   float32
+	outputKey     string
+	nextID        string
+}
+
+func (z *ZhipuNode) Run(ctx chain.Context) (nextID string, err error) {
 	var history []ai.Message
-	if z.SaveHistory {
-		history = z.getMessages(z.Limit)
+	var setHistory func(messages ...ai.Message)
+	if c, ok := ctx.(chain.ChatContext); !ok && z.enableHistory {
+		err = fmt.Errorf("required chain.Context to manager history")
+		return
+	} else if z.enableHistory {
+		history = c.GetHistory(z.limit)
+		setHistory = c.SetHistory
 	}
 
-	if len(history) == 0 {
-		history = append(history, ai.Message{
-			Role:    "system",
-			Content: z.SystemPrompt,
-		})
-	}
+	params := ctx.GetParams(z.paramKeys)
 	history = append(history, ai.Message{
 		Role:    "user",
-		Content: ctx.GetParam(z.InKey).(string),
+		Content: params[z.inputKey].(string),
 	})
-	messages, err := MessagesFromStandard(history...)
+	prompt, err := ai.RenderPrompt(z.promptTpl, params, history)
+
+	req := &ChatCompletionReq{
+		Model: z.model,
+		Messages: []Message{
+			{
+				Role:    "user",
+				Content: prompt,
+			},
+		},
+	}
+	if z.temperature != 0 {
+		req.Temperature = &z.temperature
+	}
+	resp, err := z.client.ChatCompletion(req)
 	if err != nil {
+		err = fmt.Errorf("request chat completion failed: %w", err)
 		return
 	}
-	resp, err := z.Client.ChatCompletion(&ChatCompletionReq{
-		Model:    z.Model,
-		Messages: messages,
-	})
-	if err != nil {
-		return
-	}
-	if z.SaveHistory {
-		var stdMessage []ai.Message
-		stdMessage, err = ToStandardMessages(*resp.Choices[0].Message)
+
+	if z.enableHistory {
+		var m []ai.Message
+		m, err = ToStandardMessages(*resp.Choices[0].Message)
 		if err != nil {
 			return
 		}
-		history = append(history, stdMessage...)
-		z.setMessages(history...)
+		history = append(history, m[0])
+		setHistory(history...)
 	}
 
-	ctx.SetParam(z.GetID(), z.OutKey, resp.Choices[0].Message.Content)
+	ctx.SetParam(fmt.Sprintf("%s.%s", z.GetID(), z.outputKey), resp.Choices[0].Message.Content)
 	nextID = z.nextID
 	return
 }

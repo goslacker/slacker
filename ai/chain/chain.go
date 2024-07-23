@@ -55,14 +55,6 @@ type ChatChain struct {
 	*History
 }
 
-func (c *ChatChain) AddNodes(nodes ...Node) {
-	for _, node := range nodes {
-		if n, ok := node.(CanSetMessageHistory); ok {
-			n.SetMessageHistorySetter(c.History.Set)
-		}
-		if n, ok := node.(CanGetMessageHistory); ok {
-			n.SetMessageHistoryGetter(c.History.Get)
-		}
-	}
-	c.Chain.AddNodes(nodes...)
+func (c *ChatChain) Run(ctx Context) (nextID string, err error) {
+	return c.Chain.Run(WithHistory(ctx, c.History))
 }

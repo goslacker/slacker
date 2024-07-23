@@ -56,11 +56,16 @@ type Request struct {
 	bodyCache string
 }
 
-func (r *Request) Info() map[string]any {
-	return map[string]any{
+func (r *Request) Info() string {
+	inf := map[string]any{
 		"method": r.Method,
 		"url":    r.URL.String(),
 		"header": r.Header,
 		"body":   r.bodyCache,
 	}
+	tmp, err := json.Marshal(inf)
+	if err != nil {
+		panic(err)
+	}
+	return string(tmp)
 }

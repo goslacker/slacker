@@ -25,8 +25,8 @@ func (r *Response) ScanJson(v any) (err error) {
 	return json.Unmarshal(content, v)
 }
 
-func (r *Response) Info() (info map[string]any) {
-	info = make(map[string]any)
+func (r *Response) Info() (info string) {
+	inf := make(map[string]any)
 
 	if r.Body != nil {
 		body := r.Body
@@ -37,12 +37,18 @@ func (r *Response) Info() (info map[string]any) {
 			panic(err)
 		}
 
-		info["body"] = string(content)
+		inf["body"] = string(content)
 
 		r.Body = io.NopCloser(bytes.NewReader(content))
 	} else {
-		info["body"] = "null"
+		inf["body"] = "null"
 	}
+
+	tmp, err := json.Marshal(inf)
+	if err != nil {
+		panic(err)
+	}
+	info = string(tmp)
 
 	return
 }

@@ -13,8 +13,8 @@ func NewTextTemplate(template string) *TextTemplate {
 }
 
 type TextTemplate struct {
-	template     string
 	subTemplates map[string]*TextTemplate
+	template     string
 }
 
 func (t *TextTemplate) AddSub(key string, subTemplate *TextTemplate) {

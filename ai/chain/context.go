@@ -3,7 +3,6 @@ package chain
 import (
 	"context"
 	"github.com/goslacker/slacker/ai"
-	"strings"
 	"sync"
 	"time"
 )
@@ -11,15 +10,14 @@ import (
 func NewContext(ctx context.Context) Context {
 	return &Ctx{
 		Context: ctx,
-		params:  make(map[string]map[string]any),
+		params:  make(map[string]any),
 	}
 }
 
 type Ctx struct {
 	context.Context
-	*History
 	path   []string
-	params map[string]map[string]any
+	params map[string]any
 	lock   sync.RWMutex
 }
 
@@ -27,24 +25,31 @@ func (p *Ctx) AfterNodeRun(node Node) {
 	p.path = append(p.path, node.GetID())
 }
 
-func (p *Ctx) SetParam(id, key string, value any) {
+func (p *Ctx) SetParam(key string, value any) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	group, ok := p.params[id]
-	if !ok {
-		group = make(map[string]any)
-		p.params[id] = group
-	}
-	group[key] = value
+	p.params[key] = value
 }
 
-func (p *Ctx) GetParam(pattern string) any {
-	paramPath := strings.Split(pattern, "/")
-	group, ok := p.params[paramPath[0]]
+func (p *Ctx) GetParam(key string) any {
+	v, ok := p.params[key]
 	if !ok {
 		return nil
+	} else {
+		return v
 	}
-	return group[paramPath[1]]
+}
+
+func (p *Ctx) GetParams(keys []string) map[string]any {
+	ret := make(map[string]any, len(keys))
+	for _, key := range keys {
+		v := p.GetParam(key)
+		if v != nil {
+			ret[key] = v
+		}
+	}
+
+	return ret
 }
 
 func NewChatCtx() ChatContext {
@@ -65,6 +70,19 @@ func (c ChatCtx) SetHistory(messages ...ai.Message) {
 
 func (c ChatCtx) GetHistory(limit int) (messages []ai.Message) {
 	return c.History.Get(limit)
+}
+
+func WithHistory(parent Context, history *History) Context {
+	switch x := parent.(type) {
+	case *ChatCtx:
+		x.History = history
+		return x
+	default:
+		return ChatCtx{
+			Context: parent,
+			History: history,
+		}
+	}
 }
 
 func WithCancel(parent Context) (Context, context.CancelFunc) {

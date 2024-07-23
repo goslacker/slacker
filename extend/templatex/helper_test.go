@@ -33,10 +33,10 @@ func TestNormal(t *testing.T) {
 产品信息如下:
 {{.ProductList}}`)
 	temp.AddSub("ProductList", NewTextTemplate(`我们有这些产品：
-{{ range $index, $item := .Products }}{{ add1 $index }}. {{ $item }}
+{{ range $index, $item := index . "task.products" }}{{ add1 $index }}. {{ $item }}
 {{ end }}`))
 	result, err := temp.RenderWithFuncMap(map[string]any{
-		"Products": products,
+		"task.products": products,
 	}, template.FuncMap{
 		"add1": func(i int) int {
 			return i + 1

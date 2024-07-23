@@ -90,7 +90,7 @@ type ChatCompletionReq struct {
 	//取值范围是：(0.0, 1.0)，不能等于 0，默认值为 0.95，值越大，会使输出更随机，更具创造性；值越小，输出会更加稳定或确定
 	//
 	//建议您根据应用场景调整 top_p 或 temperature 参数，但不要同时调整两个参数
-	Temperature float32 `json:"temperature,omitempty"`
+	Temperature *float32 `json:"temperature,omitempty"`
 
 	//用温度取样的另一种方法，称为核取样
 	//

@@ -8,8 +8,9 @@ import (
 type Context interface {
 	context.Context
 	AfterNodeRun(node Node)
-	SetParam(id, key string, value any)
+	SetParam(key string, value any)
 	GetParam(pattern string) any
+	GetParams(patterns []string) map[string]any
 }
 
 type ChatContext interface {
