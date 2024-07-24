@@ -8,7 +8,7 @@ import (
 type Property struct {
 	Type        string `json:"type"`
 	Description string `json:"description"`
-	Enum        []any
+	Enum        []any  `json:"enum,omitempty"`
 }
 
 type Parameters struct {
