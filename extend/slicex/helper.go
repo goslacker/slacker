@@ -64,3 +64,11 @@ func SameItem[T comparable](s ...T) bool {
 
 	return true
 }
+
+func Map[T any, R any](s []T, f func(item T) R) []R {
+	ret := make([]R, 0, len(s))
+	for _, item := range s {
+		ret = append(ret, f(item))
+	}
+	return ret
+}

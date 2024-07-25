@@ -23,7 +23,7 @@ func Default() *Container {
 	return def
 }
 
-func Bind[T any](providerOrInstance any, sets ...func(*bindOpts)) (err error) {
+func Bind[T any](providerOrInstance any, sets ...func(*BindOpts)) (err error) {
 	return Default().Bind(reflect.TypeOf((*T)(nil)).Elem(), reflect.ValueOf(providerOrInstance), sets...)
 }
 
@@ -48,7 +48,7 @@ func MustResolve[T any]() (result T) {
 	return
 }
 
-func Invoke(f any, opts ...func(*invokeOpts)) (err error) {
+func Invoke(f any, opts ...func(*InvokeOpts)) (err error) {
 	results, err := Default().Invoke(reflect.ValueOf(f), opts...)
 	if err != nil {
 		return

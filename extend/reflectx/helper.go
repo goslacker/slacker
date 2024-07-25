@@ -48,3 +48,11 @@ func SetValue(dstValue reflect.Value, srcValue reflect.Value) (err error) {
 
 	return
 }
+
+func NewIndirectType(t reflect.Type) (r reflect.Value) {
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	r = reflect.New(t)
+	return
+}

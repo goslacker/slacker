@@ -405,16 +405,17 @@ func testFunc() int {
 	return 1
 }
 
-func TestXxx(t *testing.T) {
-	s4 := &Struct4{}
-	v := reflect.ValueOf(s4).Elem()
-	v2 := reflect.New(reflect.TypeOf(testFunc))
-	v2.Elem().Set(reflect.ValueOf(testFunc))
-	av := reflect.NewAt(reflect.TypeOf(testFunc), v.Addr().UnsafePointer())
-	av.Elem().Set(reflect.ValueOf(testFunc))
-	require.Equal(t, 1, s4.f())
+type MyError struct{}
+
+func (MyError) Error() string {
+	return ""
 }
 
-func TestXxx2(t *testing.T) {
-	println(reflect.New(reflect.TypeOf(testFunc)).Elem().IsNil())
+func tf() (int, *MyError) {
+	return 0, nil
+}
+func TestXxx(t *testing.T) {
+	v := reflect.TypeOf(tf)
+	println(v.Out(1).Name())
+	println(v.Out(1).Implements(reflect.TypeOf((*error)(nil)).Elem()))
 }

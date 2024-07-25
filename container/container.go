@@ -6,35 +6,37 @@ import (
 	"reflect"
 )
 
+var ErrNotFound = fmt.Errorf("not found")
+
 type provider struct {
 	Func      reflect.Value
 	Singleton bool
 }
 
-type invokeOpts struct {
+type InvokeOpts struct {
 	params map[int]any
 	keys   map[int]string
 }
 
-func WithParams(params map[int]any) func(*invokeOpts) {
-	return func(opts *invokeOpts) {
+func WithParams(params map[int]any) func(*InvokeOpts) {
+	return func(opts *InvokeOpts) {
 		opts.params = params
 	}
 }
 
-type bindOpts struct {
+type BindOpts struct {
 	Singleton bool
 	Key       string
 }
 
-func NoSingleton() func(*bindOpts) {
-	return func(opts *bindOpts) {
+func NoSingleton() func(*BindOpts) {
+	return func(opts *BindOpts) {
 		opts.Singleton = false
 	}
 }
 
-func WithKey(key string) func(*bindOpts) {
-	return func(opts *bindOpts) {
+func WithKey(key string) func(*BindOpts) {
+	return func(opts *BindOpts) {
 		opts.Key = key
 	}
 }
@@ -51,8 +53,8 @@ type Container struct {
 	instances map[reflect.Type]map[string]reflect.Value
 }
 
-func (c *Container) Bind(t reflect.Type, value reflect.Value, opts ...func(*bindOpts)) (err error) {
-	options := &bindOpts{
+func (c *Container) Bind(t reflect.Type, value reflect.Value, opts ...func(*BindOpts)) (err error) {
+	options := &BindOpts{
 		Singleton: true,
 	}
 	for _, opt := range opts {
@@ -72,7 +74,7 @@ func (c *Container) Bind(t reflect.Type, value reflect.Value, opts ...func(*bind
 }
 
 // bindConsistent 目标类型与给定值类型一致的情况
-func (c *Container) bindInstance(t reflect.Type, value reflect.Value, options *bindOpts) (err error) {
+func (c *Container) bindInstance(t reflect.Type, value reflect.Value, options *BindOpts) (err error) {
 	if t != value.Type() {
 		value = value.Convert(t)
 	}
@@ -87,7 +89,7 @@ func (c *Container) bindInstance(t reflect.Type, value reflect.Value, options *b
 	return
 }
 
-func (c *Container) bindProvider(t reflect.Type, value reflect.Value, options *bindOpts) (err error) {
+func (c *Container) bindProvider(t reflect.Type, value reflect.Value, options *BindOpts) (err error) {
 	group, ok := c.providers[t]
 	if !ok {
 		group = make(map[string]*provider)
@@ -101,8 +103,8 @@ func (c *Container) bindProvider(t reflect.Type, value reflect.Value, options *b
 	return
 }
 
-func (c *Container) invoke(ctx context.Context, fn reflect.Value, opts ...func(opts *invokeOpts)) (rets []reflect.Value, err error) {
-	options := &invokeOpts{
+func (c *Container) invoke(ctx context.Context, fn reflect.Value, opts ...func(opts *InvokeOpts)) (rets []reflect.Value, err error) {
+	options := &InvokeOpts{
 		params: make(map[int]any),
 		keys:   make(map[int]string),
 	}
@@ -237,7 +239,7 @@ func (c *Container) resolve(ctx context.Context, t reflect.Type, key string) (re
 			}
 		}
 	}
-	err = fmt.Errorf("type <%s> not found", t.String())
+	err = fmt.Errorf("type <%s> resolve failed: %w", t.String(), ErrNotFound)
 	return
 }
 
@@ -245,7 +247,7 @@ func (c *Container) Resolve(t reflect.Type, key string) (result reflect.Value, e
 	return c.resolve(nil, t, key)
 }
 
-func (c *Container) Invoke(f reflect.Value, opts ...func(*invokeOpts)) (results []reflect.Value, err error) {
+func (c *Container) Invoke(f reflect.Value, opts ...func(*InvokeOpts)) (results []reflect.Value, err error) {
 	return c.invoke(context.Background(), f, opts...)
 }
 
