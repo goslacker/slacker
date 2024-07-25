@@ -1,18 +1,51 @@
 package ginx
 
 import (
+	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/goslacker/slacker/app"
 	"github.com/goslacker/slacker/extend/ginx/middleware"
 	"github.com/goslacker/slacker/extend/slicex"
 	"github.com/spf13/viper"
+	"log/slog"
 	"net/http"
+	"time"
 )
+
+func NewGinx() *Ginx {
+	return &Ginx{}
+}
 
 type Ginx struct {
 	app.IsComponent
 	router gin.IRouter
+	svr    *http.Server
+}
+
+func (g *Ginx) Start() {
+	c := viper.Sub("ginx")
+
+	g.svr = &http.Server{
+		Handler: g.router.(http.Handler),
+	}
+	g.svr.Addr = c.GetString("addr")
+
+	var err error
+	if c.GetBool("lts") {
+		err = g.svr.ListenAndServeTLS(c.GetString("certFile"), c.GetString("keyFile"))
+	} else {
+		err = g.svr.ListenAndServe()
+	}
+	if err != nil {
+		slog.Info("server shutdown", "error", err)
+	}
+}
+
+func (g *Ginx) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = g.svr.Shutdown(ctx)
 }
 
 func (g *Ginx) Init() (err error) {
@@ -25,10 +58,10 @@ func (g *Ginx) Init() (err error) {
 		return errors.New("ginx init failed: no config found")
 	}
 	g.router = gin.Default()
-	g.router.Use(middleware.Options)
 	if c.GetBool("cors") {
 		g.router.Use(middleware.CORS)
 	}
+	g.router.Use(middleware.Options)
 
 	err = app.Bind[Router](g)
 	if err != nil {
