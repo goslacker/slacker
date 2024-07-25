@@ -64,11 +64,11 @@ type ChatCtx struct {
 	*History
 }
 
-func (c ChatCtx) SetHistory(messages ...ai.Message) {
+func (c *ChatCtx) SetHistory(messages ...ai.Message) {
 	c.History.Set(messages...)
 }
 
-func (c ChatCtx) GetHistory(limit int) (messages []ai.Message) {
+func (c *ChatCtx) GetHistory(limit int) (messages []ai.Message) {
 	return c.History.Get(limit)
 }
 
