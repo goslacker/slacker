@@ -1,16 +1,26 @@
 package chain
 
-import "github.com/goslacker/slacker/ai"
+import (
+	"context"
+	"github.com/goslacker/slacker/ai/client"
+)
 
-type ChatNode interface {
-	CanGetMessageHistory
-	CanSetMessageHistory
+type Context interface {
+	context.Context
+	SetParam(key string, value any)
+	GetParam(pattern string) any
+	GetAllParams() map[string]any
+	SetHistory(messages ...client.Message)
+	GetHistory(limit int) (messages []client.Message)
 }
 
-type CanGetMessageHistory interface {
-	SetMessageHistoryGetter(func(limit int) (messages []ai.Message))
+type Node interface {
+	GetID() string
+	GetName() string
+	Run(ctx Context) (nextID string, err error)
 }
 
-type CanSetMessageHistory interface {
-	SetMessageHistorySetter(func(messages ...ai.Message))
+type Chain interface {
+	AddNodes(nodes ...Node)
+	Node
 }

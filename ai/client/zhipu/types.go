@@ -1,14 +1,14 @@
 package zhipu
 
-import (
-	"github.com/goslacker/slacker/ai"
-	"github.com/goslacker/slacker/tool"
-)
+type Error struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
 
 type Property struct {
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	Enum        []any  `json:"enum,omitempty"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Enum        []string `json:"enum,omitempty"`
 }
 
 type Parameters struct {
@@ -62,7 +62,7 @@ type Retrieval struct {
 type WebSearch struct {
 	Enable       *bool  `json:"enable,omitempty"`
 	SearchQuery  string `json:"search_query,omitempty"`
-	SearchResult *bool  `json:"search_result,omitempty"`
+	SearchResult bool   `json:"search_result,omitempty"`
 }
 
 type Tool struct {
@@ -75,7 +75,7 @@ type Tool struct {
 type ChatCompletionReq struct {
 	Model     string    `json:"model" validate:"required"`    //所要调用的模型编码
 	Messages  []Message `json:"messages" validate:"required"` //调用语言模型时，将当前对话信息列表作为提示输入给模型， 按照 {"role": "user", "content": "你好"} 的json 数组形式进行传参； 可能的消息类型包括 System message、User message、Assistant message 和 Tool message。
-	RequestID *string   `json:"request_id,omitempty"`         //由用户端传参，需保证唯一性；用于区分每次请求的唯一标识，用户端不传时平台会默认生成。
+	RequestID string    `json:"request_id,omitempty"`         //由用户端传参，需保证唯一性；用于区分每次请求的唯一标识，用户端不传时平台会默认生成。
 	DoSimple  *bool     `json:"do_sample,omitempty"`          //为 true 时启用采样策略，do_sample 为 false 时采样策略 temperature、top_p 将不生效。默认值为 true。
 
 	//使用同步调用时，此参数应当设置为 fasle 或者省略。表示模型生成完所有内容后一次性返回所有内容。默认值为 false。
@@ -101,7 +101,7 @@ type ChatCompletionReq struct {
 	//例如：0.1 意味着模型解码器只考虑从前 10% 的概率的候选集中取 tokens
 	//
 	//建议您根据应用场景调整 top_p 或 temperature 参数，但不要同时调整两个参数
-	TopP      float32  `json:"top_p,omitempty"`
+	TopP      *float32 `json:"top_p,omitempty"`
 	MaxTokens int      `json:"max_tokens,omitempty"` //模型输出最大 tokens，最大输出为4095，默认值为1024
 	Stop      []string `json:"stop,omitempty"`       //模型在遇到stop所制定的字符时将停止生成，目前仅支持单个停止词，格式为["stop_word1"]
 
@@ -120,24 +120,16 @@ type FunctionCallInfo struct {
 }
 
 type Message struct {
-	Role      string `json:"role"`              //消息的角色信息，此时应为system user assistant tool
-	Content   string `json:"content,omitempty"` //消息内容
-	ToolCalls []struct {
-		ID       string            `json:"id"`                 //工具id
-		Type     string            `json:"type"`               //工具类型,支持web_search、retrieval、function
-		Function *FunctionCallInfo `json:"function,omitempty"` //type为"function"时不为空
-	} `json:"tool_calls,omitempty"` //模型产生的工具调用消息
-	ToolCallID string `json:"tool_call_id,omitempty"` //tool的调用记录
+	Role       string     `json:"role"`                   //消息的角色信息，此时应为system user assistant tool
+	Content    string     `json:"content,omitempty"`      //消息内容
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`   //模型产生的工具调用消息
+	ToolCallID string     `json:"tool_call_id,omitempty"` //tool的调用记录
 }
 
-func MessagesFromStandard(m ...ai.Message) (messages []Message, err error) {
-	err = tool.SimpleMap(&messages, m)
-	return
-}
-
-func ToStandardMessages(messages ...Message) (m []ai.Message, err error) {
-	err = tool.SimpleMap(&m, messages)
-	return
+type ToolCall struct {
+	ID       string            `json:"id"`                 //工具id
+	Type     string            `json:"type"`               //工具类型,支持web_search、retrieval、function
+	Function *FunctionCallInfo `json:"function,omitempty"` //type为"function"时不为空
 }
 
 type Choice struct {
@@ -168,10 +160,11 @@ type WebSearchResp struct {
 }
 
 type ChatCompletionResp struct {
-	ID        string        `json:"id"`
-	Created   int64         `json:"created"`
-	Model     string        `json:"model"`
-	Choices   []Choice      `json:"choices"`
-	Usage     Usage         `json:"usage"`
-	WebSearch WebSearchResp `json:"web_search"`
+	ID        string          `json:"id"`
+	Created   int64           `json:"created"`
+	Model     string          `json:"model"`
+	Choices   []Choice        `json:"choices"`
+	Usage     Usage           `json:"usage"`
+	WebSearch []WebSearchResp `json:"web_search"`
+	Error     *Error          `json:"error,omitempty"`
 }

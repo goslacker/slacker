@@ -11,33 +11,33 @@ func NewChain() Chain {
 }
 
 type chain struct {
-	NodeInfo
+	Info
 	nodes   map[string]Node
-	FirstID string
-	LastID  string
+	firstID string
+	lastID  string
+	nextID  string
 }
 
 func (c *chain) AddNodes(nodes ...Node) {
-	for _, node := range nodes {
-		c.nodes[node.GetID()] = node
+	for _, nod := range nodes {
+		c.nodes[nod.GetID()] = nod
 	}
-	c.FirstID = nodes[0].GetID()
-	c.LastID = nodes[len(nodes)-1].GetID()
+	c.firstID = nodes[0].GetID()
+	c.lastID = nodes[len(nodes)-1].GetID()
 
 	return
 }
 
 func (c *chain) Run(ctx Context) (nextID string, err error) {
-	nodeID := c.FirstID
+	nodeID := c.firstID
 	for {
-		node := c.nodes[nodeID]
-		nodeID, err = node.Run(ctx)
+		nod := c.nodes[nodeID]
+		nodeID, err = nod.Run(ctx)
 		if err != nil {
-			err = fmt.Errorf("run node <%s> failed: %w", node.GetID(), err)
+			err = fmt.Errorf("run node %s<%s> failed: %w", nod.GetName(), nod.GetID(), err)
 			return
 		}
-		ctx.AfterNodeRun(node)
-		if node.GetID() == c.LastID {
+		if nod.GetID() == c.lastID {
 			return
 		}
 	}

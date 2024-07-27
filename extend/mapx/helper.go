@@ -35,3 +35,13 @@ func Values[K comparable, V any](m map[K]V) []V {
 	}
 	return values
 }
+
+func Map[K comparable, V any, ToK comparable, ToV any](m map[K]V, f func(key K, value V) (newKey ToK, newV ToV)) map[ToK]ToV {
+	ret := make(map[ToK]ToV, len(m))
+	for key, value := range m {
+		newKey, newV := f(key, value)
+		ret[newKey] = newV
+	}
+
+	return ret
+}

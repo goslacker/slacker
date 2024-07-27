@@ -7,6 +7,16 @@ import (
 	"strings"
 )
 
+func Find[T any](s []T, f func(item T) bool) (T, bool) {
+	for _, item := range s {
+		if f(item) {
+			return item, true
+		}
+	}
+
+	return *new(T), false
+}
+
 func Merge[T any](ss ...[]T) []T {
 	ret := make([]T, 0, len(ss))
 	for _, s := range ss {

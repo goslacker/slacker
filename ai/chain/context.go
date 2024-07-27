@@ -2,7 +2,7 @@ package chain
 
 import (
 	"context"
-	"github.com/goslacker/slacker/ai"
+	"github.com/goslacker/slacker/ai/client"
 	"sync"
 	"time"
 )
@@ -16,23 +16,21 @@ func NewContext(ctx context.Context) Context {
 
 type Ctx struct {
 	context.Context
-	path   []string
-	params map[string]any
-	lock   sync.RWMutex
+	params  map[string]any
+	lock    sync.RWMutex
+	history *History
 }
 
-func (p *Ctx) AfterNodeRun(node Node) {
-	p.path = append(p.path, node.GetID())
+func (c *Ctx) SetParam(key string, value any) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.params[key] = value
 }
 
-func (p *Ctx) SetParam(key string, value any) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.params[key] = value
-}
-
-func (p *Ctx) GetParam(key string) any {
-	v, ok := p.params[key]
+func (c *Ctx) GetParam(key string) any {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	v, ok := c.params[key]
 	if !ok {
 		return nil
 	} else {
@@ -40,48 +38,25 @@ func (p *Ctx) GetParam(key string) any {
 	}
 }
 
-func (p *Ctx) GetParams(keys []string) map[string]any {
-	ret := make(map[string]any, len(keys))
-	for _, key := range keys {
-		v := p.GetParam(key)
-		if v != nil {
-			ret[key] = v
-		}
-	}
-
-	return ret
+func (c *Ctx) GetAllParams() map[string]any {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return c.params
 }
 
-func NewChatCtx() ChatContext {
-	return &ChatCtx{
-		Context: NewContext(context.Background()),
-		History: NewHistory(),
-	}
+func (c *Ctx) SetHistory(messages ...client.Message) {
+	c.history.Set(messages...)
 }
 
-type ChatCtx struct {
-	Context
-	*History
-}
-
-func (c *ChatCtx) SetHistory(messages ...ai.Message) {
-	c.History.Set(messages...)
-}
-
-func (c *ChatCtx) GetHistory(limit int) (messages []ai.Message) {
-	return c.History.Get(limit)
+func (c *Ctx) GetHistory(limit int) (messages []client.Message) {
+	return c.history.Get(limit)
 }
 
 func WithHistory(parent Context, history *History) Context {
-	switch x := parent.(type) {
-	case *ChatCtx:
-		x.History = history
-		return x
-	default:
-		return ChatCtx{
-			Context: parent,
-			History: history,
-		}
+	return &Ctx{
+		params:  parent.GetAllParams(),
+		Context: parent,
+		history: history,
 	}
 }
 
