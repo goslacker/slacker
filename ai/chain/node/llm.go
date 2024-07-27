@@ -41,19 +41,19 @@ func WithNextID(id string) func(*LLM) {
 
 func WithID(id string) func(*LLM) {
 	return func(llm *LLM) {
-		llm.Info.ID = id
+		llm.NodeInfo.ID = id
 	}
 }
 
 func WithVariables(variables ...chain.Variable) func(*LLM) {
 	return func(llm *LLM) {
-		llm.Info.Variables = variables
+		llm.NodeInfo.Variables = variables
 	}
 }
 
 func NewLLM(name string, model string, promptTpl string, inputKey string, opts ...func(*LLM)) *LLM {
 	l := &LLM{
-		Info: chain.Info{
+		NodeInfo: chain.NodeInfo{
 			Name: name,
 			Type: chain.TypeLLM,
 			Variables: []chain.Variable{
@@ -80,16 +80,16 @@ type LLMTool struct {
 }
 
 type LLM struct {
-	chain.Info
-	Model         string
-	EnableHistory bool
-	Limit         int
-	PromptTpl     string
-	Temperature   *float32
-	InputKey      string
-	Client        client.ChatCompletable
-	Tools         []LLMTool
-	NextID        string
+	chain.NodeInfo
+	Model         string          `json:"model"`
+	EnableHistory bool            `json:"enableHistory"`
+	Limit         int             `json:"limit"`
+	PromptTpl     string          `json:"promptTpl"`
+	Temperature   *float32        `json:"temperature"`
+	InputKey      string          `json:"inputKey"`
+	Client        client.AIClient `json:"-"`
+	Tools         []LLMTool       `json:"tools"`
+	NextID        string          `json:"nextId"`
 }
 
 func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
@@ -211,7 +211,7 @@ func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
 		setHistory(append(history, resp.Choices[0].Message)...)
 	}
 
-	ctx.SetParam(fmt.Sprintf("%s.%s", l.Info.GetID(), l.Info.VariableNames()[0]), resp.Choices[0].Message.Content)
+	ctx.SetParam(fmt.Sprintf("%s.%s", l.NodeInfo.GetID(), l.NodeInfo.VariableNames()[0]), resp.Choices[0].Message.Content)
 	nextID = l.NextID
 	return
 }

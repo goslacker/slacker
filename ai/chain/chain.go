@@ -11,7 +11,7 @@ func NewChain() Chain {
 }
 
 type chain struct {
-	Info
+	NodeInfo
 	nodes   map[string]Node
 	firstID string
 	lastID  string

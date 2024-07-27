@@ -1,6 +1,6 @@
 package client
 
-type ChatCompletable interface {
+type AIClient interface {
 	ChatCompletion(req *ChatCompletionReq) (resp *ChatCompletionResp, err error)
 }
 
@@ -79,11 +79,6 @@ type Message struct {
 	Name       string     `json:"name,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
-}
-
-type ToolChoice struct {
-	Type     string   `json:"type"`
-	Function Function `json:"function"`
 }
 
 type ToolType string

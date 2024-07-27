@@ -11,7 +11,11 @@ import (
 	"net/http"
 )
 
-func NewClient(apiKey string) *Client {
+func init() {
+	client.Register("glm-4-0520", NewClient)
+}
+
+func NewClient(apiKey string) client.AIClient {
 	return &Client{
 		apiKey: apiKey,
 		httpClient: httpClient.NewClient(

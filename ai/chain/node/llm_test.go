@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/goslacker/slacker/ai/chain"
 	"github.com/goslacker/slacker/ai/client"
-	"github.com/goslacker/slacker/ai/client/zhipu"
+	_ "github.com/goslacker/slacker/ai/client/zhipu"
 	"github.com/stretchr/testify/require"
 	"log/slog"
 	"testing"
@@ -15,7 +15,7 @@ import (
 func TestLLM(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	llm := &LLM{
-		Info: chain.Info{
+		NodeInfo: chain.NodeInfo{
 			ID:   "test",
 			Name: "test",
 			Type: chain.TypeLLM,
@@ -29,7 +29,7 @@ func TestLLM(t *testing.T) {
 		},
 		Model:         "glm-4-0520",
 		EnableHistory: true,
-		Client:        zhipu.NewClient("43fdee09f289c308c45390f7e7963a7a.YAg2csgsVqYAznyS"),
+		Client:        client.New("glm-4-0520", ""),
 		Tools: []LLMTool{
 			{
 				Func: func(params string) string {
