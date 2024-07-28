@@ -3,10 +3,11 @@ package node
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"github.com/goslacker/slacker/ai/chain"
 	"github.com/goslacker/slacker/ai/client"
 	"github.com/goslacker/slacker/extend/slicex"
-	"log/slog"
 )
 
 func WithEnableHistory() func(*LLM) {
@@ -51,7 +52,19 @@ func WithVariables(variables ...chain.Variable) func(*LLM) {
 	}
 }
 
-func NewLLM(name string, model string, promptTpl string, inputKey string, opts ...func(*LLM)) *LLM {
+func WithPromptTpl(promptTpl string) func(*LLM) {
+	return func(llm *LLM) {
+		llm.PromptTpl = promptTpl
+	}
+}
+
+func WithPromptTplKey(promptTplKey string) func(*LLM) {
+	return func(llm *LLM) {
+		llm.PromptTplKey = promptTplKey
+	}
+}
+
+func NewLLM(name string, model string, inputKey string, opts ...func(*LLM)) *LLM {
 	l := &LLM{
 		NodeInfo: chain.NodeInfo{
 			Name: name,
@@ -64,9 +77,8 @@ func NewLLM(name string, model string, promptTpl string, inputKey string, opts .
 				},
 			},
 		},
-		Model:     model,
-		PromptTpl: promptTpl,
-		InputKey:  inputKey,
+		Model:    model,
+		InputKey: inputKey,
 	}
 	for _, opt := range opts {
 		opt(l)
@@ -90,9 +102,18 @@ type LLM struct {
 	Client        client.AIClient `json:"-"`
 	Tools         []LLMTool       `json:"tools"`
 	NextID        string          `json:"nextId"`
+	PromptTplKey  string          `json:"promptTplKey"`
 }
 
 func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
+	if l.PromptTpl == "" && l.PromptTplKey == "" {
+		return "", errors.New("prompt tpl is required")
+	}
+
+	if l.PromptTplKey != "" {
+		l.PromptTpl = ctx.GetParam(l.PromptTplKey).(string)
+	}
+
 	var history []client.Message
 	var setHistory func(messages ...client.Message)
 	if l.EnableHistory {

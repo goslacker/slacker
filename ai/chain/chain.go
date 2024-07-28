@@ -56,5 +56,6 @@ type ChatChain struct {
 }
 
 func (c *ChatChain) Run(ctx Context) (nextID string, err error) {
-	return c.Chain.Run(WithHistory(ctx, c.History))
+	ctx.SetHistoryManager(c.History)
+	return c.Chain.Run(ctx)
 }

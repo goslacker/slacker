@@ -1,8 +1,9 @@
 package chain
 
 import (
-	"github.com/goslacker/slacker/ai/client"
 	"sync"
+
+	"github.com/goslacker/slacker/ai/client"
 )
 
 func NewHistory() *History {
@@ -18,7 +19,6 @@ type History struct {
 func (c *History) Set(messages ...client.Message) {
 	c.historyLock.Lock()
 	defer c.historyLock.Unlock()
-
 	c.MessageHistory = filterFirstSystemPrompt(messages)
 }
 
@@ -36,6 +36,9 @@ func (c *History) Get(limit int) (history []client.Message) {
 }
 
 func filterFirstSystemPrompt(messages []client.Message) []client.Message {
+	if len(messages) == 0 {
+		return messages
+	}
 	if messages[0].Role == "system" {
 		return messages[1:]
 	} else {

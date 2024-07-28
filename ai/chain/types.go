@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+
 	"github.com/goslacker/slacker/ai/client"
 )
 
@@ -12,6 +13,7 @@ type Context interface {
 	GetAllParams() map[string]any
 	SetHistory(messages ...client.Message)
 	GetHistory(limit int) (messages []client.Message)
+	SetHistoryManager(history *History)
 }
 
 type Node interface {

@@ -2,9 +2,10 @@ package chain
 
 import (
 	"context"
-	"github.com/goslacker/slacker/ai/client"
 	"sync"
 	"time"
+
+	"github.com/goslacker/slacker/ai/client"
 )
 
 func NewContext(ctx context.Context) Context {
@@ -50,6 +51,10 @@ func (c *Ctx) SetHistory(messages ...client.Message) {
 
 func (c *Ctx) GetHistory(limit int) (messages []client.Message) {
 	return c.history.Get(limit)
+}
+
+func (c *Ctx) SetHistoryManager(history *History) {
+	c.history = history
 }
 
 func WithHistory(parent Context, history *History) Context {
