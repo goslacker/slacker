@@ -52,15 +52,15 @@ func WithVariables(variables ...chain.Variable) func(*LLM) {
 	}
 }
 
-func WithPromptTpl(promptTpl string) func(*LLM) {
+func WithSystemPrompt(SystemPrompt string) func(*LLM) {
 	return func(llm *LLM) {
-		llm.PromptTpl = promptTpl
+		llm.SystemPromptTpl = SystemPrompt
 	}
 }
 
-func WithPromptTplKey(promptTplKey string) func(*LLM) {
+func WithPromptTplKey(systemPromptTplKey string) func(*LLM) {
 	return func(llm *LLM) {
-		llm.PromptTplKey = promptTplKey
+		llm.SystemPromptTplKey = systemPromptTplKey
 	}
 }
 
@@ -93,25 +93,28 @@ type LLMTool struct {
 
 type LLM struct {
 	chain.NodeInfo
-	Model         string          `json:"model"`
-	EnableHistory bool            `json:"enableHistory"`
-	Limit         int             `json:"limit"`
-	PromptTpl     string          `json:"promptTpl"`
-	Temperature   *float32        `json:"temperature"`
-	InputKey      string          `json:"inputKey"`
-	Client        client.AIClient `json:"-"`
-	Tools         []LLMTool       `json:"tools"`
-	NextID        string          `json:"nextId"`
-	PromptTplKey  string          `json:"promptTplKey"`
+	Model              string          `json:"model"`
+	EnableHistory      bool            `json:"enableHistory"`
+	Limit              int             `json:"limit"`
+	SystemPromptTpl    string          `json:"systemPromptTpl"`
+	Temperature        *float32        `json:"temperature"`
+	InputKey           string          `json:"inputKey"`
+	Client             client.AIClient `json:"-"`
+	Tools              []LLMTool       `json:"tools"`
+	NextID             string          `json:"nextId"`
+	SystemPromptTplKey string          `json:"systemPromptTplKey"`
 }
 
 func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
-	if l.PromptTpl == "" && l.PromptTplKey == "" {
-		return "", errors.New("prompt tpl is required")
+	if l.SystemPromptTpl == "" && l.SystemPromptTplKey == "" {
+		return "", errors.New("system prompt is required")
 	}
 
-	if l.PromptTplKey != "" {
-		l.PromptTpl = ctx.GetParam(l.PromptTplKey).(string)
+	if l.SystemPromptTplKey != "" {
+		prompt := ctx.GetParam(l.SystemPromptTplKey)
+		if prompt != nil {
+			l.SystemPromptTpl = prompt.(string)
+		}
 	}
 
 	var history []client.Message
@@ -128,23 +131,26 @@ func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
 		return "", errors.New("input is required")
 	}
 
+	if len(history) == 0 && l.SystemPromptTpl != "" {
+		var prompt string
+		prompt, err = renderPrompt(l.SystemPromptTpl, ctx.GetAllParams())
+		if err != nil {
+			return
+		}
+		history = append(history, client.Message{
+			Role:    "system",
+			Content: prompt,
+		})
+	}
+
 	history = append(history, client.Message{
 		Role:    "user",
 		Content: ctx.GetParam(l.InputKey).(string),
 	})
-	prompt, err := renderPrompt(l.PromptTpl, ctx.GetAllParams(), history)
-	if err != nil {
-		return
-	}
 
 	req := &client.ChatCompletionReq{
-		Model: l.Model,
-		Messages: []client.Message{
-			{
-				Role:    "user",
-				Content: prompt,
-			},
-		},
+		Model:       l.Model,
+		Messages:    history,
 		Temperature: l.Temperature,
 		Tools: slicex.Map(l.Tools, func(tool LLMTool) client.Tool {
 			return client.Tool{
@@ -195,19 +201,9 @@ func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
 			}
 		}
 
-		prompt, err = renderPrompt(l.PromptTpl, ctx.GetAllParams(), history)
-		if err != nil {
-			return
-		}
-
 		req = &client.ChatCompletionReq{
-			Model: l.Model,
-			Messages: []client.Message{
-				{
-					Role:    "user",
-					Content: prompt,
-				},
-			},
+			Model:       l.Model,
+			Messages:    history,
 			Temperature: l.Temperature,
 			Tools: slicex.Map(l.Tools, func(tool LLMTool) client.Tool {
 				return client.Tool{

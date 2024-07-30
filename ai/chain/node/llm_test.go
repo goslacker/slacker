@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"testing"
+
 	"github.com/goslacker/slacker/ai/chain"
 	"github.com/goslacker/slacker/ai/client"
 	_ "github.com/goslacker/slacker/ai/client/zhipu"
 	"github.com/stretchr/testify/require"
-	"log/slog"
-	"testing"
 )
 
 func TestLLM(t *testing.T) {
@@ -52,7 +53,7 @@ func TestLLM(t *testing.T) {
 			},
 		},
 		InputKey: "input",
-		PromptTpl: `概要：
+		SystemPromptTpl: `概要：
   你是好吃烘培店的店员小高，现在一个潜在客户找到了你。你将通过对话来发掘客户的需求，并指定合适的方案，从而促使客户下单购买。
   在解决了客户当前的问题后，你擅长将对话的焦点从无关的话题引向你的业务范围，来推销店里的产品。
 
@@ -78,10 +79,7 @@ func TestLLM(t *testing.T) {
   你只有两个选择：
     1.正常调用工具，而不是回复。
     2.严格按照以下格式回复：{"env":"当前的语境以及你遇到的问题","step": "当前所处或者应该进入的销售环节，只能使用已经定义的销售环节","thought": "你的思考过程","next":"你下一步的动作，或者你需要调用工具的名称","replay":"不能为空，你对客户的回复"}
-  你只能二选一，你不应该混用这两种格式。
-
-聊天记录：
-  {{#history#}}`,
+  你只能二选一，你不应该混用这两种格式。`,
 	}
 	c := chain.NewContext(context.Background())
 	history := chain.NewHistory()
