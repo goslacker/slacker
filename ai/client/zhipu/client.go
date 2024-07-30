@@ -2,13 +2,14 @@ package zhipu
 
 import (
 	"fmt"
+	"log/slog"
+	"net/http"
+
 	"github.com/goslacker/slacker/ai/client"
 	httpClient "github.com/goslacker/slacker/extend/httpx/client"
 	"github.com/goslacker/slacker/extend/mapx"
 	"github.com/goslacker/slacker/extend/slicex"
 	"github.com/goslacker/slacker/tool"
-	"log/slog"
-	"net/http"
 )
 
 func init() {
@@ -37,9 +38,16 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 	request := ChatCompletionReq{
 		Model: req.Model,
 		Messages: slicex.Map(req.Messages, func(item client.Message) Message {
+			var content string
+			switch x := item.Content.(type) {
+			case string:
+				content = x
+			default:
+				content = ""
+			}
 			return Message{
 				Role:       item.Role,
-				Content:    item.Content.(string),
+				Content:    content,
 				ToolCallID: item.ToolCallID,
 			}
 		}),
