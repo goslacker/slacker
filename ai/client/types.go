@@ -19,12 +19,12 @@ type ChatCompletionReq struct {
 	ServiceTier       string            `json:"serviceTier,omitempty"`
 	Stop              []string          `json:"stop,omitempty"`
 	Stream            bool              `json:"stream,omitempty"`
-	StreamOptions     map[string]any    `json:"stream_options,omitempty"`
+	StreamOptions     map[string]any    `json:"streamOptions,omitempty"`
 	Temperature       *float32          `json:"temperature,omitempty"`
-	TopP              *float32          `json:"top_p,omitempty"`
+	TopP              *float32          `json:"topP,omitempty"`
 	Tools             []Tool            `json:"tools,omitempty"`
-	ToolChoice        any               `json:"tool_choice,omitempty"` //string || []ToolChoice
-	ParallelToolCalls *bool             `json:"disable_parallel_tool_calls,omitempty"`
+	ToolChoice        any               `json:"toolChoice,omitempty"` //string || []ToolChoice
+	ParallelToolCalls *bool             `json:"parallelToolCalls,omitempty"`
 	User              string            `json:"user,omitempty"`
 }
 
@@ -33,11 +33,11 @@ type ChatCompletionResp struct {
 	Choices           []Choice        `json:"choices"`
 	Created           int64           `json:"created,omitempty"`
 	Model             string          `json:"model"`
-	ServiceTier       string          `json:"service_tier,omitempty"`
-	SystemFingerprint string          `json:"system_fingerprint,omitempty"`
+	ServiceTier       string          `json:"serviceTier,omitempty"`
+	SystemFingerprint string          `json:"systemFingerprint,omitempty"`
 	Object            string          `json:"object,omitempty"`
 	Usage             Usage           `json:"usage,omitempty"`
-	WebSearch         []WebSearchResp `json:"web_search,omitempty"`
+	WebSearch         []WebSearchResp `json:"webSearch,omitempty"`
 }
 
 type WebSearchResp struct {
@@ -49,13 +49,13 @@ type WebSearchResp struct {
 }
 
 type Usage struct {
-	CompletionTokens int `json:"completion_tokens"`
-	PromptTokens     int `json:"prompt_tokens"`
-	TotalTokens      int `json:"total_tokens"`
+	CompletionTokens int `json:"completionTokens"`
+	PromptTokens     int `json:"promptTokens"`
+	TotalTokens      int `json:"totalTokens"`
 }
 
 type Choice struct {
-	FinishReason string  `json:"finish_reason,omitempty"`
+	FinishReason string  `json:"finishReason,omitempty"`
 	Index        int     `json:"index,omitempty"`
 	Message      Message `json:"message,omitempty"`
 	Delta        Message `json:"delta,omitempty"`
@@ -68,7 +68,7 @@ type Choice struct {
 				Token   string  `json:"token"`
 				Logprob float32 `json:"logprob"`
 				Bytes   []int   `json:"bytes"`
-			} `json:"top_logprobs"`
+			} `json:"topLogprobs"`
 		} `json:"content"`
 	} `json:"logprobs,omitempty"`
 }
@@ -77,8 +77,8 @@ type Message struct {
 	Role       string     `json:"role"`
 	Content    any        `json:"content,omitempty"` // string || []Content
 	Name       string     `json:"name,omitempty"`
-	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string     `json:"tool_call_id,omitempty"`
+	ToolCalls  []ToolCall `json:"toolCalls,omitempty"`
+	ToolCallID string     `json:"toolCallId,omitempty"`
 }
 
 type ToolType string
@@ -86,25 +86,25 @@ type ToolType string
 const (
 	ToolTypeFunction  ToolType = "function"
 	ToolTypeRetrieval ToolType = "retrieval"
-	ToolTypeWebSearch ToolType = "web_search"
+	ToolTypeWebSearch ToolType = "webSearch"
 )
 
 type Tool struct {
 	Type      ToolType   `json:"type"`
 	Function  *Function  `json:"function,omitempty"`
 	Retrieval *Retrieval `json:"retrieval,omitempty"`
-	WebSearch *WebSearch `json:"web_search,omitempty"`
+	WebSearch *WebSearch `json:"webSearch,omitempty"`
 }
 
 type WebSearch struct {
 	Enable       *bool  `json:"enable,omitempty"`
-	SearchQuery  string `json:"search_query"`
-	SearchResult bool   `json:"search_result"`
+	SearchQuery  string `json:"searchQuery"`
+	SearchResult bool   `json:"searchResult"`
 }
 
 type Retrieval struct {
-	KnowledgeID    string `json:"knowledge_id"`
-	PromptTemplate string `json:"prompt_template"`
+	KnowledgeID    string `json:"knowledgeId"`
+	PromptTemplate string `json:"promptTemplate"`
 }
 
 type Function struct {
@@ -130,13 +130,13 @@ type ContentType string
 
 const (
 	ContentTypeText     ContentType = "text"
-	ContentTypeImageUrl ContentType = "image_url"
+	ContentTypeImageUrl ContentType = "imageUrl"
 )
 
 type Content struct {
 	Type     string `json:"type"`
 	Text     string `json:"text,omitempty"`
-	ImageUrl string `json:"image_url,omitempty"`
+	ImageUrl string `json:"imageUrl,omitempty"`
 }
 
 type ToolCall struct {
