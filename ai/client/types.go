@@ -144,3 +144,12 @@ type ToolCall struct {
 	Type     ToolType `json:"type,omitempty"`
 	Function Function `json:"function,omitempty"`
 }
+
+type Role string
+
+const (
+	RoleSystem    Role = "system"
+	RoleUser      Role = "user"
+	RoleAssistant Role = "assistant"
+	RoleTool      Role = "tool"
+)
