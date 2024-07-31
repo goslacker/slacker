@@ -93,7 +93,7 @@ type Tool struct {
 	Type      ToolType   `json:"type"`
 	Function  *Function  `json:"function,omitempty"`
 	Retrieval *Retrieval `json:"retrieval,omitempty"`
-	WebSearch *WebSearch `json:"webSearch,omitempty"`
+	WebSearch *WebSearch `json:"web_search,omitempty"`
 }
 
 type WebSearch struct {
