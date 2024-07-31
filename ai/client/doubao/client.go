@@ -97,6 +97,17 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 				Message: client.Message{
 					Content: *choice.Message.Content.StringValue,
 					Role:    choice.Message.Role,
+					ToolCalls: slicex.Map(choice.Message.ToolCalls, func(toolCall *model.ToolCall) client.ToolCall {
+						call := client.ToolCall{
+							ID:   toolCall.ID,
+							Type: client.ToolType(toolCall.Type),
+							Function: client.Function{
+								Arguments: toolCall.Function.Arguments,
+								Name:      toolCall.Function.Name,
+							},
+						}
+						return call
+					}),
 				},
 			}
 		}),
