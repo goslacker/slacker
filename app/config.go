@@ -1,12 +1,13 @@
 package app
 
 import (
-	"github.com/goslacker/slacker/container"
-	"github.com/spf13/viper"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/goslacker/slacker/container"
+	"github.com/spf13/viper"
 )
 
 const (

@@ -49,23 +49,29 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 				m.Content = x
 			case []client.Content:
 				m.Content = slicex.Map(x, func(item client.Content) Content {
-					return Content{
+					c := Content{
 						Text: item.Text,
-						ImageUrl: ImageUrl{
-							Url: item.ImageUrl,
-						},
 						Type: item.Type,
 					}
+					if item.Type == "image_url" {
+						c.ImageUrl = &ImageUrl{
+							Url: item.ImageUrl,
+						}
+					}
+					return c
 				})
 			case []*client.Content:
 				m.Content = slicex.Map(x, func(item *client.Content) Content {
-					return Content{
+					c := Content{
 						Text: item.Text,
-						ImageUrl: ImageUrl{
-							Url: item.ImageUrl,
-						},
 						Type: item.Type,
 					}
+					if item.Type == "image_url" {
+						c.ImageUrl = &ImageUrl{
+							Url: item.ImageUrl,
+						}
+					}
+					return c
 				})
 			default:
 				panic(errors.New("unsupported type"))
@@ -161,7 +167,7 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 			return client.Choice{
 				Message: client.Message{
 					Role:    item.Message.Role,
-					Content: tool.Ternary[any](item.Message.Content == "", nil, item.Message.Content),
+					Content: tool.Ternary(item.Message.Content == "", nil, item.Message.Content),
 					ToolCalls: slicex.Map(item.Message.ToolCalls, func(item ToolCall) client.ToolCall {
 						return client.ToolCall{
 							ID:   item.ID,
