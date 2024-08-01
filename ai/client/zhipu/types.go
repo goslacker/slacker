@@ -121,9 +121,19 @@ type FunctionCallInfo struct {
 
 type Message struct {
 	Role       string     `json:"role"`                   //消息的角色信息，此时应为system user assistant tool
-	Content    string     `json:"content,omitempty"`      //消息内容
+	Content    any        `json:"content,omitempty"`      //消息内容
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`   //模型产生的工具调用消息
 	ToolCallID string     `json:"tool_call_id,omitempty"` //tool的调用记录
+}
+
+type ImageUrl struct {
+	Url string `json:"url"`
+}
+
+type Content struct {
+	Type     string   `json:"type"`
+	Text     string   `json:"text,omitempty"`
+	ImageUrl ImageUrl `json:"image_url,omitempty"`
 }
 
 type ToolCall struct {

@@ -1,6 +1,7 @@
 package zhipu
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 func init() {
 	client.Register("glm-4-0520", NewClient)
+	client.Register("glm-4v", NewClient)
 }
 
 func NewClient(apiKey string) client.AIClient {
@@ -38,18 +40,37 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 	request := ChatCompletionReq{
 		Model: req.Model,
 		Messages: slicex.Map(req.Messages, func(item client.Message) Message {
-			var content string
-			switch x := item.Content.(type) {
-			case string:
-				content = x
-			default:
-				content = ""
-			}
-			return Message{
+			m := Message{
 				Role:       item.Role,
-				Content:    content,
 				ToolCallID: item.ToolCallID,
 			}
+			switch x := item.Content.(type) {
+			case string:
+				m.Content = x
+			case []client.Content:
+				m.Content = slicex.Map(x, func(item client.Content) Content {
+					return Content{
+						Text: item.Text,
+						ImageUrl: ImageUrl{
+							Url: item.ImageUrl,
+						},
+						Type: item.Type,
+					}
+				})
+			case []*client.Content:
+				m.Content = slicex.Map(x, func(item *client.Content) Content {
+					return Content{
+						Text: item.Text,
+						ImageUrl: ImageUrl{
+							Url: item.ImageUrl,
+						},
+						Type: item.Type,
+					}
+				})
+			default:
+				panic(errors.New("unsupported type"))
+			}
+			return m
 		}),
 		MaxTokens: req.MaxTokens,
 		Stop:      req.Stop,

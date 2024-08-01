@@ -650,6 +650,34 @@ func TestClient_ChatCompletion(t *testing.T) {
 	println(string(j))
 }
 
+func TestReadPic(t *testing.T) {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	c := NewClient("0ec138af3eefaaa0865075f94ddd878c.IRR6QbphMcBC7oH6")
+	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
+		Model: "glm-4v",
+		Messages: []client.Message{
+			{Role: "user", Content: []client.Content{
+				{
+					Type: string(client.ContentTypeText),
+					Text: "图片描述了什么",
+				},
+				{
+					Type:     string(client.ContentTypeImageUrl),
+					ImageUrl: "https://img1.baidu.com/it/u=1369931113,3388870256&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1703696400&t=f3028c7a1dca43a080aeb8239f09cc2f",
+				},
+			}},
+		},
+	})
+	require.NoError(t, err)
+	j, err := json.Marshal(resp.Choices[0].Message)
+	require.NoError(t, err)
+	println(string(j))
+
+	j, err = json.Marshal(resp.Usage)
+	require.NoError(t, err)
+	println(string(j))
+}
+
 //{"ContentString":"","ContentArray":null,"Role":"assistant","Name":"","ToolCalls":[{"ID":"call_20240727160630c0ee7f4b0bfc40d4","Type":"","Function":{"Description":"","Name":"get_weather_info","Parameters":{"Type":"","Properties":null,"Required":null},"Arguments":"{\"city\": \"成都\"}"}}],"ToolCallID":""}
 //[
 //    {"role":"user","content":"明天天气怎么样？"},

@@ -130,7 +130,7 @@ type ContentType string
 
 const (
 	ContentTypeText     ContentType = "text"
-	ContentTypeImageUrl ContentType = "imageUrl"
+	ContentTypeImageUrl ContentType = "image_url"
 )
 
 type Content struct {
