@@ -97,11 +97,11 @@ type testDefaultNode struct {
 }
 
 func (t *testDefaultNode) Run(ctx context.Context) {
-	t.DefaultNode.WithRunFunc(func(ctx context.Context, params map[string]any) (result map[string]any, stop bool) {
+	t.DefaultNode.WithRunFunc(func(ctx context.Context, params map[string]any) (result map[string]any, err error) {
 		if t.ID != "stop" {
 			params["a"] = params["a"].(int) + 1
 		}
-		return params, false
+		return params, nil
 	}).Run(ctx)
 }
 

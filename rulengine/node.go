@@ -2,6 +2,8 @@ package ruleengine
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 )
 
 type Node interface {
@@ -13,7 +15,7 @@ type DefaultNode struct {
 	ID         string            `json:"id"`
 	Name       string            `json:"name"`
 	ParamMap   map[string]string `json:"paramMap"`
-	runFunc    func(ctx context.Context, params map[string]any) (result map[string]any, stop bool)
+	runFunc    func(ctx context.Context, params map[string]any) (result map[string]any, err error)
 	detailFunc func(params map[string]any, result map[string]any) any
 }
 
@@ -41,11 +43,7 @@ func (n *DefaultNode) setParam(ctx context.Context, param map[string]any) {
 	paramManager.(*Param).SetWithPrefix(param, n.Name)
 }
 
-func (n *DefaultNode) SetRunFunc(runFunc func(ctx context.Context, params map[string]any) (result map[string]any, stop bool)) {
-	n.runFunc = runFunc
-}
-
-func (n *DefaultNode) WithRunFunc(runFunc func(ctx context.Context, params map[string]any) (result map[string]any, stop bool)) *DefaultNode {
+func (n *DefaultNode) WithRunFunc(runFunc func(ctx context.Context, params map[string]any) (result map[string]any, err error)) *DefaultNode {
 	n.runFunc = runFunc
 	return n
 }
@@ -56,17 +54,23 @@ func (n *DefaultNode) WithDetailFunc(detailFunc func(params map[string]any, resu
 }
 
 func (n *DefaultNode) Run(ctx context.Context) {
+	d := ctx.Value(DetailKey)
+
 	params := n.loadParam(ctx)
-	result, stop := n.runFunc(ctx, params)
-	if stop {
+	result, err := n.runFunc(ctx, params)
+	if err != nil {
 		ctx.Value(ChainKey).(*Chain).Stop()
+		err = fmt.Errorf("node %s run failed: %w", n.Name, err)
+		slog.Error(err.Error())
+		if d != nil {
+			d.(*Detail).Push(n.Name, map[string]any{"error": err.Error()})
+		}
 		return
 	}
 	if len(result) > 0 {
 		n.setParam(ctx, result)
 	}
 	if n.detailFunc != nil {
-		d := ctx.Value(DetailKey)
 		if d != nil {
 			d.(*Detail).Push(n.Name, n.detailFunc(params, result))
 		}
