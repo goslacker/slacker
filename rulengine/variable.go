@@ -7,7 +7,7 @@ type variableKey string
 var VariableKey variableKey = "variable"
 
 type Variable struct {
-	m    map[string]string
+	m    map[string]any
 	lock sync.RWMutex
 }
 
@@ -17,7 +17,7 @@ func (v *Variable) Set(key, value string) {
 	v.m[key] = value
 }
 
-func (v *Variable) Get(key string) string {
+func (v *Variable) Get(key string) any {
 	v.lock.RLock()
 	defer v.lock.RUnlock()
 	return v.m[key]
