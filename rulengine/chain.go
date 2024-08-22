@@ -12,24 +12,19 @@ type chainKey string
 
 var ChainKey chainKey = "chain"
 
-type Node interface {
-	GetID() string
-	Run(ctx context.Context)
-}
-
 type Edge interface {
 	GetTarget() string
 	GetSource() string
 }
 
 type Chain struct {
-	ID             string
-	nodes          []Node
-	edges          []Edge
-	waits          sync.Map
-	completeds     sync.Map
-	OnAllCompleted func()
-	wg             sync.WaitGroup
+	ID         string
+	nodes      []Node
+	edges      []Edge
+	waits      sync.Map
+	completeds sync.Map
+	wg         sync.WaitGroup
+	cancel     context.CancelFunc
 }
 
 func (c *Chain) GetID() string {
@@ -39,9 +34,10 @@ func (c *Chain) GetID() string {
 	return c.ID
 }
 
-func (c *Chain) allCompleted() {
-	if c.OnAllCompleted != nil {
-		c.OnAllCompleted()
+// Stop 停止规则链执行
+func (c *Chain) Stop() {
+	if c.cancel != nil {
+		c.cancel()
 	}
 }
 
@@ -157,15 +153,15 @@ func (c *Chain) findNexts(current Node) []Node {
 
 func (c *Chain) Run(ctx context.Context) {
 	parent := ctx.Value(ChainKey)
-	defer func() {
+	defer func() { //TODO: 添加错误处理
 		if parent != nil {
 			parent.(*Chain).Next(ctx, c)
 		}
 	}()
+	ctx, c.cancel = context.WithCancel(ctx)
 	ctx = context.WithValue(ctx, ChainKey, c)
 	c.Next(ctx, nil)
 	c.wg.Wait()
-	c.allCompleted()
 }
 
 func (c *Chain) first() Node {
