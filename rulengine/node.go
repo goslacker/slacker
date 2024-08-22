@@ -10,10 +10,11 @@ type Node interface {
 }
 
 type DefaultNode struct {
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	ParamMap map[string]string `json:"paramMap"`
-	runFunc  func(ctx context.Context, params map[string]any) (result map[string]any, stop bool)
+	ID         string            `json:"id"`
+	Name       string            `json:"name"`
+	ParamMap   map[string]string `json:"paramMap"`
+	runFunc    func(ctx context.Context, params map[string]any) (result map[string]any, stop bool)
+	detailFunc func(params map[string]any, result map[string]any) any
 }
 
 func (n *DefaultNode) GetID() string {
@@ -49,6 +50,11 @@ func (n *DefaultNode) WithRunFunc(runFunc func(ctx context.Context, params map[s
 	return n
 }
 
+func (n *DefaultNode) WithDetailFunc(detailFunc func(params map[string]any, result map[string]any) any) *DefaultNode {
+	n.detailFunc = detailFunc
+	return n
+}
+
 func (n *DefaultNode) Run(ctx context.Context) {
 	params := n.loadParam(ctx)
 	result, stop := n.runFunc(ctx, params)
@@ -58,6 +64,12 @@ func (n *DefaultNode) Run(ctx context.Context) {
 	}
 	if len(result) > 0 {
 		n.setParam(ctx, result)
+	}
+	if n.detailFunc != nil {
+		d := ctx.Value(DetailKey)
+		if d != nil {
+			d.(*Detail).Push(n.Name, n.detailFunc(params, result))
+		}
 	}
 	ctx.Value(ChainKey).(*Chain).Next(ctx, n)
 }
