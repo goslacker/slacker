@@ -2,9 +2,10 @@ package slicex
 
 import (
 	"errors"
-	"github.com/goslacker/slacker/extend/reflectx"
 	"reflect"
 	"strings"
+
+	"github.com/goslacker/slacker/extend/reflectx"
 )
 
 func Find[T any](s []T, f func(item T) bool) (T, bool) {
@@ -81,4 +82,14 @@ func Map[T any, R any](s []T, f func(item T) R) []R {
 		ret = append(ret, f(item))
 	}
 	return ret
+}
+
+func Filter[T any](s []T, f func(item T) bool) []T {
+	var tmp []T
+	for _, item := range s {
+		if f(item) {
+			tmp = append(tmp, item)
+		}
+	}
+	return tmp
 }
