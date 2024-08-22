@@ -158,8 +158,11 @@ func (c *Chain) Run(ctx context.Context) {
 			parent.(*Chain).Next(ctx, c)
 		}
 	}()
-	if ctx.Value("detail") == nil {
+	if ctx.Value(DetailKey) == nil {
 		ctx = context.WithValue(ctx, DetailKey, &Detail{})
+	}
+	if ctx.Value(VariableKey) == nil {
+		ctx = context.WithValue(ctx, VariableKey, &Variable{})
 	}
 	ctx, c.cancel = context.WithCancel(ctx)
 	ctx = context.WithValue(ctx, ChainKey, c)
