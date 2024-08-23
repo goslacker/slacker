@@ -11,7 +11,7 @@ type Variable struct {
 	lock sync.RWMutex
 }
 
-func (v *Variable) Set(key, value string) {
+func (v *Variable) Set(key string, value any) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	v.m[key] = value
