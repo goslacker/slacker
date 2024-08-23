@@ -17,6 +17,14 @@ type Edge interface {
 	GetSource() string
 }
 
+func NewChain(ID string) *Chain {
+	return &Chain{
+		ID:    ID,
+		nodes: make([]Node, 0, 10),
+		edges: make([]Edge, 0, 10),
+	}
+}
+
 type Chain struct {
 	ID         string
 	nodes      []Node
@@ -76,6 +84,11 @@ func (c *Chain) Next(ctx context.Context, current Node) {
 			}
 		}
 	}
+}
+
+func (c *Chain) SetContent(nodes []Node, edges []Edge) {
+	c.nodes = nodes
+	c.edges = edges
 }
 
 func (c *Chain) readyToRun(nextID string) bool {

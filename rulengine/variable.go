@@ -6,6 +6,12 @@ type variableKey string
 
 var VariableKey variableKey = "variable"
 
+func NewVariable() *Variable {
+	return &Variable{
+		m: make(map[string]any),
+	}
+}
+
 type Variable struct {
 	m    map[string]any
 	lock sync.RWMutex

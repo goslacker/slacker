@@ -29,3 +29,8 @@ func (p *Param) LoadByMap(paramMap map[string]string) map[string]any {
 
 	return result
 }
+
+func (p *Param) Get(key string) any {
+	ret, _ := p.m.Load(key)
+	return ret
+}
