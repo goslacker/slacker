@@ -23,8 +23,9 @@ func (v *Variable) Set(key string, value any) {
 	v.m[key] = value
 }
 
-func (v *Variable) Get(key string) any {
+func (v *Variable) Get(key string) (result any, ok bool) {
 	v.lock.RLock()
 	defer v.lock.RUnlock()
-	return v.m[key]
+	result, ok = v.m[key]
+	return
 }

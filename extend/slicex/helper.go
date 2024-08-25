@@ -35,6 +35,24 @@ func Contains[T comparable](target T, s []T) bool {
 	return false
 }
 
+func ContainsAny[T comparable](target []T, s []T) bool {
+	for _, v := range target {
+		if Contains(v, s) {
+			return true
+		}
+	}
+	return false
+}
+
+func ContainsAll[T comparable](target []T, s []T) bool {
+	for _, v := range target {
+		if !Contains(v, s) {
+			return false
+		}
+	}
+	return true
+}
+
 func GetFieldSlice[T any](key string, target any) []T {
 	v := reflect.ValueOf(target)
 	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {

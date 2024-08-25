@@ -54,26 +54,29 @@ func (n *DefaultNode) WithDetailFunc(detailFunc func(params map[string]any, resu
 }
 
 func (n *DefaultNode) Run(ctx context.Context) {
-	d := ctx.Value(DetailKey)
+	if n.runFunc != nil {
+		d := ctx.Value(DetailKey)
 
-	params := n.loadParam(ctx)
-	result, err := n.runFunc(ctx, params)
-	if err != nil {
-		ctx.Value(ChainKey).(*Chain).Stop()
-		err = fmt.Errorf("node %s run failed: %w", n.Name, err)
-		slog.Error(err.Error())
-		if d != nil {
-			d.(*Detail).Push(n.Name, map[string]any{"error": err.Error()})
+		params := n.loadParam(ctx)
+		result, err := n.runFunc(ctx, params)
+		if err != nil {
+			ctx.Value(ChainKey).(*Chain).Stop()
+			err = fmt.Errorf("node %s run failed: %w", n.Name, err)
+			slog.Error(err.Error())
+			if d != nil {
+				d.(*Detail).Push(n.Name, map[string]any{"error": err.Error()})
+			}
+			return
 		}
-		return
-	}
-	if len(result) > 0 {
-		n.setParam(ctx, result)
-	}
-	if n.detailFunc != nil {
-		if d != nil {
-			d.(*Detail).Push(n.Name, n.detailFunc(params, result))
+		if len(result) > 0 {
+			n.setParam(ctx, result)
+		}
+		if n.detailFunc != nil {
+			if d != nil {
+				d.(*Detail).Push(n.Name, n.detailFunc(params, result))
+			}
 		}
 	}
+
 	ctx.Value(ChainKey).(*Chain).Next(ctx, n)
 }
