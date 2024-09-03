@@ -23,7 +23,7 @@ func (m Module) Init() (err error) {
 		return
 	}
 
-	app.RegisterListener(func(event app.AfterInit) {
+	app.RegisterListener(func(event app.BeforeBoot) {
 		err = app.Invoke(func(m database.Migrator) (err error) {
 			err = m.Migrate()
 			if err != nil {
