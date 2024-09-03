@@ -12,9 +12,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Repository[Entity])) database.Repository[Entity] {
+func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Repository[Entity])) *Repository[PO, Entity] {
 	r := &Repository[PO, Entity]{
-		db:  db,
+		DB:  db,
 		m2e: database.DefaultM2E[PO, Entity],
 		e2m: database.DefaultE2M[PO, Entity],
 	}
@@ -27,7 +27,7 @@ func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Reposi
 }
 
 type Repository[PO any, Entity any] struct {
-	db  *gorm.DB
+	DB  *gorm.DB
 	ctx context.Context
 	m2e func(dst *Entity, src *PO) error
 	e2m func(dst *PO, src *Entity) error
@@ -45,12 +45,12 @@ func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) database.Repositor
 	tx := ctx.Value(database.TxKey)
 	if tx != nil {
 		return &Repository[PO, Entity]{
-			db:  tx.(*gorm.DB).WithContext(ctx),
+			DB:  tx.(*gorm.DB).WithContext(ctx),
 			ctx: ctx,
 		}
 	}
 	return &Repository[PO, Entity]{
-		db:  r.db.WithContext(ctx),
+		DB:  r.DB.WithContext(ctx),
 		ctx: ctx,
 	}
 }
@@ -66,7 +66,7 @@ func (r *Repository[PO, Entity]) Create(entities ...*Entity) (err error) {
 		pos = append(pos, po)
 	}
 
-	err = r.db.Create(&pos).Error
+	err = r.DB.Create(&pos).Error
 	if err != nil {
 		return
 	}
@@ -88,7 +88,7 @@ func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err
 		if err != nil {
 			return
 		}
-		err = r.db.Updates(po).Error
+		err = r.DB.Updates(po).Error
 		if err != nil {
 			return
 		}
@@ -97,7 +97,7 @@ func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err
 			return
 		}
 	case map[string]any:
-		query := r.db
+		query := r.DB
 		if len(conditions) > 0 {
 			query, err = Apply(query, conditions...)
 			if err != nil {
@@ -113,7 +113,7 @@ func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err
 }
 
 func (r *Repository[PO, Entity]) First(conditions ...any) (entity *Entity, err error) {
-	db, err := Apply(r.db, conditions...)
+	db, err := Apply(r.DB, conditions...)
 	if err != nil {
 		return
 	}
@@ -130,7 +130,7 @@ func (r *Repository[PO, Entity]) First(conditions ...any) (entity *Entity, err e
 }
 
 func (r *Repository[PO, Entity]) List(conditions ...any) (list []*Entity, err error) {
-	db, err := Apply(r.db, conditions...)
+	db, err := Apply(r.DB, conditions...)
 	if err != nil {
 		return
 	}
@@ -155,7 +155,7 @@ func (r *Repository[PO, Entity]) List(conditions ...any) (list []*Entity, err er
 }
 
 func (r *Repository[PO, Entity]) Delete(conditions ...any) (err error) {
-	db, err := Apply(r.db, conditions...)
+	db, err := Apply(r.DB, conditions...)
 	if err != nil {
 		return
 	}
@@ -165,7 +165,7 @@ func (r *Repository[PO, Entity]) Delete(conditions ...any) (err error) {
 }
 
 func (r *Repository[PO, Entity]) Pagination(offset int, limit int, conditions ...any) (total int64, list []*Entity, err error) {
-	db, err := Apply(r.db, conditions...)
+	db, err := Apply(r.DB, conditions...)
 	if err != nil {
 		return
 	}
@@ -198,7 +198,7 @@ func (r *Repository[PO, Entity]) Transaction(f func(ctx context.Context) error) 
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	err = r.db.Transaction(func(tx *gorm.DB) (err error) {
+	err = r.DB.Transaction(func(tx *gorm.DB) (err error) {
 		ctx = context.WithValue(ctx, database.TxKey, tx)
 		return f(ctx)
 	})
@@ -211,7 +211,7 @@ func (r *Repository[PO, Entity]) Begin() (ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return context.WithValue(ctx, database.TxKey, r.db.Begin())
+	return context.WithValue(ctx, database.TxKey, r.DB.Begin())
 }
 
 func (r *Repository[PO, Entity]) Commit(ctx context.Context) (err error) {
