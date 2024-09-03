@@ -48,7 +48,7 @@ func RegisterListener[T any](listeners ...eventbus.ListenerFunc[T]) {
 	eventbus.Register(listeners...)
 }
 func Fire[T any](event T) {
-	eventbus.Fire[T](event)
+	eventbus.Fire(event)
 }
 
 func GetContainer() *container.Container {

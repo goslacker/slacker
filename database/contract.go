@@ -25,3 +25,10 @@ type ConditionApplier[DB any] interface {
 type Order []string
 
 type Condition []any
+
+type Migrator interface {
+	RegisterMigrates(...any) error
+	Migrate() error
+	Up(stepNum int) error
+	Down(stepNum int) error
+}
