@@ -31,11 +31,12 @@ type Component struct {
 	app.Component
 	cancel    context.CancelFunc
 	registers []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
+	gwServer  *http.Server
 }
 
 // Start 启动服务并阻塞, 框架一般会将这个方法作为协程调用, 报错应打日志记录
 func (c *Component) Start() {
-	if len(c.registers) > 0 {
+	if len(c.registers) <= 0 {
 		slog.Warn("no gateway register")
 		return
 	}
@@ -72,17 +73,20 @@ func (c *Component) Start() {
 		}
 	}
 
-	gwServer := &http.Server{
+	c.gwServer = &http.Server{
 		Addr:    viper.Sub("grpcGateway").GetString("addr"),
 		Handler: mux,
 	}
 
 	slog.Info("Serving gRPC-Gateway on " + viper.Sub("grpcGateway").GetString("addr"))
-	slog.Error("grpc server shutdown", "err", gwServer.ListenAndServe())
+	slog.Error("grpc gateway server shutdown", "err", c.gwServer.ListenAndServe())
 }
 
 // Stop 停止服务并阻塞, 报错应打日志记录
 func (c *Component) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5)
+	defer cancel()
+	c.gwServer.Shutdown(ctx)
 	if c.cancel != nil {
 		c.cancel()
 	}

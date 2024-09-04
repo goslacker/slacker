@@ -76,9 +76,12 @@ func (m *Component) Start() {
 		panic(fmt.Errorf("tcp listen port failed: %w", err))
 	}
 
+	slog.Info("Serving gRPC on " + c.GetString("addr"))
 	err = m.grpcServer.Serve(lis)
 	if err != nil {
 		slog.Error("grpc server shutdown", "error", err)
+	} else {
+		slog.Info("grpc server shutdown")
 	}
 }
 
