@@ -25,7 +25,7 @@ func (a *App) RegisterComponent(components ...Component) {
 }
 
 func (a *App) Init() (err error) {
-	Fire(&BeforeInit{})
+	Fire(BeforeInit{})
 	for _, module := range a.components {
 		if m, ok := module.(Initable); ok {
 			err = m.Init()
@@ -34,13 +34,13 @@ func (a *App) Init() (err error) {
 			}
 		}
 	}
-	Fire(&AfterInit{})
+	Fire(AfterInit{})
 
 	return
 }
 
 func (a *App) Boot() (err error) {
-	Fire(&BeforeBoot{})
+	Fire(BeforeBoot{})
 	for _, module := range a.components {
 		if m, ok := module.(Bootable); ok {
 			err = m.Boot()
@@ -49,7 +49,7 @@ func (a *App) Boot() (err error) {
 			}
 		}
 	}
-	Fire(&AfterBoot{})
+	Fire(AfterBoot{})
 
 	return
 }
@@ -65,8 +65,8 @@ func (a *App) Run() (n int, err error) {
 		return
 	}
 
-	Fire(&BeforeRun{})
-	defer Fire(&AfterRun{})
+	Fire(BeforeRun{})
+	defer Fire(AfterRun{})
 	for _, m := range a.components {
 		if module, ok := m.(Serviceable); ok {
 			a.wg.Add(1)
@@ -82,8 +82,8 @@ func (a *App) Run() (n int, err error) {
 }
 
 func (a *App) Shutdown() {
-	Fire(&BeforeShutdown{})
-	defer Fire(&AfterShutdown{})
+	Fire(BeforeShutdown{})
+	defer Fire(AfterShutdown{})
 	for _, m := range a.components {
 		if module, ok := m.(Serviceable); ok {
 			go module.Stop()

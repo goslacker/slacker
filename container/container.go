@@ -248,7 +248,8 @@ func (c *Container) Resolve(t reflect.Type, key string) (result reflect.Value, e
 }
 
 func (c *Container) Invoke(f reflect.Value, opts ...func(*InvokeOpts)) (results []reflect.Value, err error) {
-	return c.invoke(context.Background(), f, opts...)
+	ctx := context.WithValue(context.Background(), "chain", newResolveChain())
+	return c.invoke(ctx, f, opts...)
 }
 
 func (c *Container) clear() {

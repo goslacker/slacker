@@ -17,6 +17,7 @@ require (
 	github.com/volcengine/volcengine-go-sdk v1.0.150
 	google.golang.org/grpc v1.66.0
 	google.golang.org/protobuf v1.34.2
+	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.11
 )
 

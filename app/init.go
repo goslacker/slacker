@@ -1,13 +1,14 @@
 package app
 
 import (
-	"github.com/spf13/viper"
 	"log/slog"
 	"os"
+
+	"github.com/spf13/viper"
 )
 
 func init() {
-	RegisterListener(func(event *BeforeInit) {
+	RegisterListener(func(event BeforeInit) {
 		opts := &slog.HandlerOptions{
 			AddSource: true,
 		}
