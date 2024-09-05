@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/goslacker/slacker/app"
+	"github.com/goslacker/slacker/extend/grpcx/interceptor"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -40,8 +41,20 @@ type Component struct {
 	registers   []func(grpc.ServiceRegistrar)
 }
 
+func (c *Component) Init() error {
+	return app.Bind[*Component](c)
+}
+
+func (m *Component) Register(registers ...func(grpc.ServiceRegistrar)) {
+	m.registers = append(m.registers, registers...)
+}
+
 func (m *Component) Start() {
 	c := viper.Sub("grpc")
+
+	if c.GetBool("trace") {
+		m.middlewares = append(m.middlewares, interceptor.UnaryTraceInterceptor)
+	}
 
 	m.grpcServer = grpc.NewServer(
 		grpc.ChainUnaryInterceptor(m.middlewares...),
