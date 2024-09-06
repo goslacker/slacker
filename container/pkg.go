@@ -1,6 +1,7 @@
 package container
 
 import (
+	"errors"
 	"reflect"
 	"sync"
 )
@@ -58,6 +59,34 @@ func Invoke(f any, opts ...func(*InvokeOpts)) (err error) {
 		if e != nil {
 			err = e.(error)
 		}
+	}
+	return
+}
+
+func ResolveDirectly[T any](provider any, opts ...func(*InvokeOpts)) (result T, err error) {
+	vp := reflect.ValueOf(provider)
+	if vp.Type().NumOut() > 2 || vp.Type().NumOut() < 1 {
+		err = errors.New("provider must return 1 or 2(with error) values")
+		return
+	}
+	results, err := Default().Invoke(vp, opts...)
+	if err != nil {
+		return
+	}
+	if len(results) == 2 {
+		if e := results[len(results)-1].Interface(); e != nil {
+			err = e.(error)
+			return
+		}
+	}
+	result = results[0].Interface().(T)
+	return
+}
+
+func MustResolveDirectly[T any](provider any, opts ...func(*InvokeOpts)) (result T) {
+	result, err := ResolveDirectly[T](provider, opts...)
+	if err != nil {
+		panic(err)
 	}
 	return
 }

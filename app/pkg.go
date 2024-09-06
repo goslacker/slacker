@@ -14,6 +14,11 @@ func Default() *App {
 	return app
 }
 
+// Use is shortcut of RegisterComponent
+func Use(components ...Component) {
+	RegisterComponent(components...)
+}
+
 func RegisterComponent(components ...Component) {
 	Default().RegisterComponent(components...)
 }
@@ -42,6 +47,14 @@ func MustResolve[T any]() (result T) {
 
 func Invoke(f any, opts ...func(*container.InvokeOpts)) (err error) {
 	return container.Invoke(f, opts...)
+}
+
+func ResolveDirectly[T any](provider any, opts ...func(*container.InvokeOpts)) (result T, err error) {
+	return container.ResolveDirectly[T](provider, opts...)
+}
+
+func MustResolveDirectly[T any](provider any, opts ...func(*container.InvokeOpts)) (result T) {
+	return container.MustResolveDirectly[T](provider, opts...)
 }
 
 func RegisterListener[T any](listeners ...eventbus.ListenerFunc[T]) {

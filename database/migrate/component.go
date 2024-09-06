@@ -7,17 +7,17 @@ import (
 	"github.com/goslacker/slacker/database"
 )
 
-func NewComponent() *Module {
-	m := &Module{}
+func NewComponent() *Component {
+	m := &Component{}
 
 	return m
 }
 
-type Module struct {
+type Component struct {
 	app.Component
 }
 
-func (m Module) Init() (err error) {
+func (m Component) Init() (err error) {
 	err = app.Bind[database.Migrator](NewDefaultMigrator)
 	if err != nil {
 		return

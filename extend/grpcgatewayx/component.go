@@ -34,6 +34,14 @@ type Component struct {
 	gwServer  *http.Server
 }
 
+func (c *Component) Register(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
+	c.registers = append(c.registers, registers...)
+}
+
+func (c *Component) Init() error {
+	return app.Bind[*Component](c)
+}
+
 // Start 启动服务并阻塞, 框架一般会将这个方法作为协程调用, 报错应打日志记录
 func (c *Component) Start() {
 	if len(c.registers) <= 0 {
