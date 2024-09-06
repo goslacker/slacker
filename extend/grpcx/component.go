@@ -42,6 +42,7 @@ type Component struct {
 }
 
 func (c *Component) Init() error {
+	c.middlewares = append(c.middlewares, interceptor.UnaryValidateInterceptor)
 	return app.Bind[*Component](c)
 }
 
