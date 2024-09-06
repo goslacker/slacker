@@ -50,9 +50,28 @@ func (r *Registry) Register(serviceName string) (err error) {
 	return
 }
 
+func (r *Registry) Resolve(serviceName string) (addr string, err error) {
+	resp, err := r.c.Get(context.Background(), serviceName, clientv3.WithPrefix())
+	if err != nil {
+		return
+	}
+	for _, value := range resp.Kvs {
+		addr = string(value.Value)
+		break
+	}
+
+	//TODO: watch
+
+	return
+}
+
 func (r *Registry) Deregister() (err error) {
 	if r.leaseID != 0 {
 		_, err = r.c.Revoke(context.Background(), r.leaseID)
+	}
+	if r.c != nil {
+		r.c.Close()
+		r.c = nil
 	}
 	return
 }

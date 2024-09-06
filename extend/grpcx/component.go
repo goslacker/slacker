@@ -114,20 +114,25 @@ func registerService(config *registry.RegistryConfig, addr string, svr *grpc.Ser
 	}
 
 	config.Addr = addr
-	registry, err := serviceregistry.New(config)
+	r, err := serviceregistry.New(config)
 	if err != nil {
 		panic(fmt.Errorf("create service registry failed: %w", err))
 	}
 
 	for name := range svr.GetServiceInfo() {
-		err := registry.Register(name)
+		err := r.Register(name)
 		if err != nil {
 			panic(fmt.Errorf("register service<%s> to registry failed: %w", name, err))
 		}
 	}
 
+	err = app.Bind[registry.ServiceRegistry](r)
+	if err != nil {
+		panic(fmt.Errorf("bind service registry failed: %w", err))
+	}
+
 	deRegister = func() {
-		err = registry.Deregister()
+		err = r.Deregister()
 		if err != nil {
 			slog.Warn("deregister service failed", "error", err)
 		}
