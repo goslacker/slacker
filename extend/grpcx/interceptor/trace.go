@@ -8,13 +8,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-func UnaryTraceInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
-	newCtx, span := startSpan(ctx, info.FullMethod)
+func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
+	newCtx, span := startServerSpan(ctx, info.FullMethod)
 	defer span.End()
 	return handler(newCtx, req)
 }
 
-func startSpan(ctx context.Context, name string) (newCtx context.Context, span trace.Span) {
+func startServerSpan(ctx context.Context, name string) (newCtx context.Context, span trace.Span) {
 	tr := otel.Tracer("slacker")
 	newCtx, span = tr.Start(
 		trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
@@ -22,4 +22,17 @@ func startSpan(ctx context.Context, name string) (newCtx context.Context, span t
 		trace.WithSpanKind(trace.SpanKindServer),
 	)
 	return
+}
+
+func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	newCtx, span := startClientSpan(ctx, method, cc.Target())
+	defer span.End()
+	return invoker(newCtx, method, req, reply, cc, opts...)
+}
+
+func startClientSpan(ctx context.Context, method, target string) (context.Context, trace.Span) {
+	tr := otel.Tracer("slacker")
+	ctx, span := tr.Start(ctx, method, trace.WithSpanKind(trace.SpanKindClient))
+
+	return ctx, span
 }
