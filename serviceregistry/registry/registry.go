@@ -8,9 +8,9 @@ const (
 )
 
 type RegistryConfig struct {
-	RegistryType RegistryType
-	Endpoints    []string
-	Addr         string
+	Type      RegistryType
+	Endpoints []string
+	Addr      string
 }
 
 type ServiceRegistry interface {

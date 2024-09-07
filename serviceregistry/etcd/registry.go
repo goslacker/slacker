@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -46,7 +47,7 @@ func (r *Registry) Register(serviceName string) (err error) {
 	if err != nil {
 		return
 	}
-
+	slog.Info("register service success", "service", serviceName)
 	return
 }
 
@@ -106,7 +107,16 @@ func (r *Registry) getLeaseID() (leaseID clientv3.LeaseID, err error) {
 			return
 		}
 		r.leaseID = resp.ID
-		r.c.KeepAlive(context.Background(), r.leaseID)
+		ch, err := r.c.KeepAlive(context.Background(), r.leaseID)
+		if err != nil {
+			r.c.Revoke(context.Background(), r.leaseID)
+			return 0, fmt.Errorf("keep alive failed: %w", err)
+		}
+		go func() {
+			for range ch {
+				// slog.Debug("keep alive success", "response", resp)
+			}
+		}()
 	}
 	return r.leaseID, nil
 }

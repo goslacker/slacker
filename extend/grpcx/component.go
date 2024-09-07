@@ -1,15 +1,19 @@
 package grpcx
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 
 	"github.com/goslacker/slacker/app"
 	"github.com/goslacker/slacker/extend/grpcx/interceptor"
 	"github.com/goslacker/slacker/serviceregistry"
 	"github.com/goslacker/slacker/serviceregistry/registry"
+	"github.com/goslacker/slacker/trace"
 	"github.com/spf13/viper"
+	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
@@ -59,7 +63,7 @@ func (m *Component) Start() {
 		panic(fmt.Errorf("read config failed: %w", err))
 	}
 
-	if conf.Trace {
+	if conf.Trace != nil {
 		m.middlewares = append(m.middlewares, interceptor.UnaryTraceServerInterceptor)
 	}
 
@@ -88,6 +92,12 @@ func (m *Component) Start() {
 
 	for _, register := range m.registers {
 		register(m.grpcServer)
+	}
+
+	if conf.Trace != nil {
+		var deferFunc func()
+		interceptor.Providers, deferFunc = traceAgent(conf.Trace, m.grpcServer)
+		defer deferFunc()
 	}
 
 	defer registerService(conf.Registry, conf.Addr, m.grpcServer)()
@@ -120,6 +130,11 @@ func registerService(config *registry.RegistryConfig, addr string, svr *grpc.Ser
 	}
 
 	for name := range svr.GetServiceInfo() {
+		//过滤掉反射服务
+		if strings.Contains(name, "grpc") {
+			continue
+		}
+
 		err := r.Register(name)
 		if err != nil {
 			panic(fmt.Errorf("register service<%s> to registry failed: %w", name, err))
@@ -139,6 +154,34 @@ func registerService(config *registry.RegistryConfig, addr string, svr *grpc.Ser
 	}
 
 	return
+}
+
+func traceAgent(conf *trace.TraceConfig, svr *grpc.Server) (providers map[string]*traceSdk.TracerProvider, deferFunc func()) {
+	deferFunc = func() {}
+	if conf == nil {
+		return
+	}
+
+	svrMap := svr.GetServiceInfo()
+
+	providers = make(map[string]*traceSdk.TracerProvider, len(svrMap))
+	for name := range svrMap {
+		if strings.Contains(name, "grpc") {
+			continue
+		}
+		var err error
+		conf.Name = name
+		providers[name], err = trace.NewTraceProvider(conf)
+		if err != nil {
+			panic(fmt.Errorf("create trace provider failed: %w", err))
+		}
+	}
+
+	return providers, func() {
+		for _, tp := range providers {
+			tp.Shutdown(context.Background())
+		}
+	}
 }
 
 func (c *Component) Stop() {

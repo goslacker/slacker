@@ -2,14 +2,27 @@ package interceptor
 
 import (
 	"context"
+	"strings"
 
 	"go.opentelemetry.io/otel"
+	traceSdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 )
 
+var Providers = map[string]*traceSdk.TracerProvider{}
+
 func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
-	newCtx, span := startServerSpan(ctx, info.FullMethod)
+	names := strings.Split(strings.Trim(info.FullMethod, "/"), "/")
+
+	tp, ok := Providers[names[0]]
+	if ok {
+		otel.SetTracerProvider(tp)
+	} else {
+		otel.SetTracerProvider(nil)
+	}
+
+	newCtx, span := startServerSpan(ctx, names[1])
 	defer span.End()
 	return handler(newCtx, req)
 }
@@ -25,7 +38,21 @@ func startServerSpan(ctx context.Context, name string) (newCtx context.Context, 
 }
 
 func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	newCtx, span := startClientSpan(ctx, method, cc.Target())
+	var srcNames []string
+
+	if srcMethod, ok := grpc.Method(ctx); ok {
+		srcNames = strings.Split(strings.Trim(srcMethod, "/"), "/")
+	}
+
+	// targetNames := strings.Split(strings.Trim(method, "/"), "/")
+	tp, ok := Providers[srcNames[0]]
+	if ok {
+		otel.SetTracerProvider(tp)
+	} else {
+		otel.SetTracerProvider(nil)
+	}
+
+	newCtx, span := startClientSpan(ctx, method, srcNames[1])
 	defer span.End()
 	return invoker(newCtx, method, req, reply, cc, opts...)
 }
