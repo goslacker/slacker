@@ -5,10 +5,13 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 var Providers = map[string]*traceSdk.TracerProvider{}
@@ -26,7 +29,24 @@ func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grp
 	newCtx, span := startServerSpan(ctx, names[1])
 	defer span.End()
 
-	return handler(newCtx, req)
+	span.SetAttributes(semconv.RPCServiceKey.String(names[0]))
+	span.SetAttributes(semconv.RPCMethodKey.String(names[1]))
+	result, err = handler(newCtx, req)
+	if err != nil {
+		s, ok := status.FromError(err)
+		if ok {
+			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(semconv.RPCGRPCStatusCodeKey.Int64(int64(s.Code())))
+			span.SetAttributes(semconv.RPCConnectRPCErrorCodeKey.String(s.Code().String()))
+		} else {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		return nil, err
+	}
+
+	span.SetAttributes(semconv.RPCGRPCStatusCodeKey.Int64(int64(codes.Ok)))
+	span.SetAttributes(semconv.RPCConnectRPCErrorCodeKey.String(codes.Ok.String()))
+	return
 }
 
 func startServerSpan(ctx context.Context, name string) (newCtx context.Context, span trace.Span) {
@@ -48,7 +68,7 @@ func startServerSpan(ctx context.Context, name string) (newCtx context.Context, 
 	return
 }
 
-func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (err error) {
 	var srcNames []string
 
 	if srcMethod, ok := grpc.Method(ctx); ok {
@@ -62,11 +82,30 @@ func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply 
 		otel.SetTracerProvider(nil)
 	}
 
-	targetNames := strings.Split(strings.Trim(method, "/"), "/")
-	newCtx, span := startClientSpan(ctx, targetNames[0])
+	newCtx, span := startClientSpan(ctx, "call "+method)
 	defer span.End()
 
-	return invoker(newCtx, method, req, reply, cc, opts...)
+	targetNames := strings.Split(strings.Trim(method, "/"), "/")
+	span.SetAttributes(semconv.RPCServiceKey.String(targetNames[0]))
+	span.SetAttributes(semconv.RPCMethodKey.String(targetNames[1]))
+
+	err = invoker(newCtx, method, req, reply, cc, opts...)
+
+	if err != nil {
+		s, ok := status.FromError(err)
+		if ok {
+			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(semconv.RPCGRPCStatusCodeKey.Int64(int64(s.Code())))
+			span.SetAttributes(semconv.RPCConnectRPCErrorCodeKey.String(s.Code().String()))
+		} else {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		return err
+	}
+
+	span.SetAttributes(semconv.RPCGRPCStatusCodeKey.Int64(int64(codes.Ok)))
+	span.SetAttributes(semconv.RPCConnectRPCErrorCodeKey.String(codes.Ok.String()))
+	return
 }
 
 func startClientSpan(ctx context.Context, name string) (context.Context, trace.Span) {
