@@ -7,7 +7,7 @@ import (
 )
 
 func TestSelfIP(t *testing.T) {
-	ip, err := SelfIP("www.baidu.com:80")
+	ip, err := IPByTarget("www.baidu.com:80")
 	require.NoError(t, err)
 	println(ip)
 }

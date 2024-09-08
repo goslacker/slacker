@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 
 	"github.com/goslacker/slacker/serviceregistry/registry"
-	"github.com/goslacker/slacker/tool"
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
@@ -43,7 +41,7 @@ func (r *Registry) Register(serviceName string) (err error) {
 		return
 	}
 
-	_, err = r.c.Put(context.Background(), serviceName+"/"+strconv.FormatInt(int64(r.leaseID), 10), r.GetAddr(), clientv3.WithLease(leaseID))
+	_, err = r.c.Put(context.Background(), serviceName+"/"+strconv.FormatInt(int64(r.leaseID), 10), r.addr, clientv3.WithLease(leaseID))
 	if err != nil {
 		return
 	}
@@ -75,27 +73,6 @@ func (r *Registry) Deregister() (err error) {
 		r.c = nil
 	}
 	return
-}
-
-func (r *Registry) GetAddr() string {
-	if r.addr == "" {
-		return ""
-	}
-	addr := strings.Split(r.addr, ":")
-	if len(addr) != 2 {
-		panic(fmt.Errorf("invalid addr: %s", r.addr))
-	}
-
-	if addr[0] != "0.0.0.0" {
-		return r.addr
-	}
-
-	selfIP, err := tool.SelfIP(r.c.Endpoints()[0])
-	if err != nil {
-		panic(fmt.Errorf("get self ip failed: %w", err))
-	}
-
-	return selfIP + ":" + addr[1]
 }
 
 func (r *Registry) getLeaseID() (leaseID clientv3.LeaseID, err error) {
