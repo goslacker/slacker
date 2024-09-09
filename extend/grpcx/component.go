@@ -49,8 +49,17 @@ type Component struct {
 	registers   []func(grpc.ServiceRegistrar)
 }
 
-func (c *Component) Init() error {
-	c.middlewares = append(c.middlewares, interceptor.UnaryValidateInterceptor)
+func (c *Component) Init() (err error) {
+	auth := interceptor.NewJWTAuth()
+	c.middlewares = []grpc.UnaryServerInterceptor{
+		interceptor.UnaryValidateInterceptor,
+		auth.UnaryAuthInterceptor,
+	}
+
+	err = app.Bind[*interceptor.JWTAuth](auth)
+	if err != nil {
+		return
+	}
 	return app.Bind[*Component](c)
 }
 
