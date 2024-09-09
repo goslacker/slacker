@@ -7,6 +7,7 @@ import (
 
 	"github.com/goslacker/slacker/app"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rs/cors"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -81,9 +82,11 @@ func (c *Component) Start() {
 		}
 	}
 
+	withCors := cors.AllowAll().Handler(mux)
+
 	c.gwServer = &http.Server{
 		Addr:    viper.Sub("grpcGateway").GetString("addr"),
-		Handler: mux,
+		Handler: withCors,
 	}
 
 	slog.Info("Serving gRPC-Gateway on " + viper.Sub("grpcGateway").GetString("addr"))
