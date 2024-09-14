@@ -69,7 +69,7 @@ func (r *Response) ScanSSEAsync(ctx context.Context) (sseCh chan *SSEItem, errCh
 					errCh <- errors.New(string(sseItem.Data))
 					return
 				}
-				if strings.ToLower(sseItem.Event) == "done" {
+				if strings.ToLower(sseItem.Event) == "done" || strings.ToLower(sseItem.Event) == "close" {
 					return
 				}
 				if sseItem.Event == "" {
