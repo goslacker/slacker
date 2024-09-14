@@ -53,13 +53,13 @@ type Component struct {
 func (c *Component) Init() (err error) {
 	auth := interceptor.NewJWTAuth()
 	c.unaryServerInterceptors = []grpc.UnaryServerInterceptor{
-		interceptor.UnaryValidateInterceptor,
 		auth.UnaryAuthInterceptor,
+		interceptor.UnaryValidateInterceptor,
 	}
 
 	c.streamServerInterceptors = []grpc.StreamServerInterceptor{
-		interceptor.StreamValidateInterceptor,
 		auth.StreamAuthInterceptor,
+		interceptor.StreamValidateInterceptor,
 	}
 
 	err = app.Bind[*interceptor.JWTAuth](auth)
@@ -90,12 +90,13 @@ func (m *Component) Start() {
 	}
 
 	if conf.Trace != nil {
-		m.unaryServerInterceptors = append(m.unaryServerInterceptors, interceptor.UnaryTraceServerInterceptor)
-		m.streamServerInterceptors = append(m.streamServerInterceptors, interceptor.StreamTraceServerInterceptor)
+		m.unaryServerInterceptors = append([]grpc.UnaryServerInterceptor{interceptor.UnaryTraceServerInterceptor}, m.unaryServerInterceptors...)
+		m.streamServerInterceptors = append([]grpc.StreamServerInterceptor{interceptor.StreamTraceServerInterceptor}, m.streamServerInterceptors...)
 	}
 
 	m.grpcServer = grpc.NewServer(
 		grpc.ChainUnaryInterceptor(m.unaryServerInterceptors...),
+		grpc.ChainStreamInterceptor(m.streamServerInterceptors...),
 	)
 
 	for _, register := range m.registers {

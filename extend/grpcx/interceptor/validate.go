@@ -2,7 +2,6 @@ package interceptor
 
 import (
 	"context"
-
 	"github.com/bufbuild/protovalidate-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -10,12 +9,21 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func StreamValidateInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	err = validate(srv)
+type streamWrapper struct {
+	grpc.ServerStream
+}
+
+func (w *streamWrapper) RecvMsg(m any) (err error) {
+	err = w.ServerStream.RecvMsg(m)
 	if err != nil {
 		return
 	}
-	return handler(srv, ss)
+	err = validate(m)
+	return
+}
+
+func StreamValidateInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	return handler(srv, &streamWrapper{ss})
 }
 
 func UnaryValidateInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {

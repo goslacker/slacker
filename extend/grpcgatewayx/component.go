@@ -2,8 +2,10 @@ package grpcgatewayx
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/goslacker/slacker/app"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -21,7 +23,9 @@ func WithRegisters(registers ...func(ctx context.Context, mux *runtime.ServeMux,
 }
 
 func NewComponent(opts ...func(*Component)) *Component {
-	c := &Component{}
+	c := &Component{
+		handlers: make(map[string]runtime.HandlerFunc),
+	}
 	for _, opt := range opts {
 		opt(c)
 	}
@@ -32,11 +36,16 @@ type Component struct {
 	app.Component
 	cancel    context.CancelFunc
 	registers []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
+	handlers  map[string]runtime.HandlerFunc
 	gwServer  *http.Server
 }
 
 func (c *Component) Register(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
 	c.registers = append(c.registers, registers...)
+}
+
+func (c *Component) RegisterCustomerHandler(method string, path string, handler runtime.HandlerFunc) {
+	c.handlers[fmt.Sprintf("%s|%s", method, path)] = handler
 }
 
 func (c *Component) Init() error {
@@ -79,6 +88,14 @@ func (c *Component) Start() {
 		err := register(ctx, mux, conn)
 		if err != nil {
 			slog.Error("Failed to register gateway", "err", err)
+		}
+	}
+
+	for key, handler := range c.handlers {
+		info := strings.Split(key, "|")
+		err := mux.HandlePath(info[0], info[1], handler)
+		if err != nil {
+			panic(err)
 		}
 	}
 

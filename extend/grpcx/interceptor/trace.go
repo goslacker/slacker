@@ -94,6 +94,10 @@ func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply 
 }
 
 func StreamTraceClientInterceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (cs grpc.ClientStream, err error) {
+	_, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return streamer(ctx, desc, cc, method, opts...)
+	}
 	err = traceClient(ctx, method, func(ctx context.Context) (err error) {
 		cs, err = streamer(ctx, desc, cc, method, opts...)
 		return
