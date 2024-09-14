@@ -69,12 +69,12 @@ func (c *Component) Init() (err error) {
 	return app.Bind[*Component](c)
 }
 
-func (m *Component) Register(registers ...func(grpc.ServiceRegistrar)) {
-	m.registers = append(m.registers, registers...)
+func (c *Component) Register(registers ...func(grpc.ServiceRegistrar)) {
+	c.registers = append(c.registers, registers...)
 }
 
-func (m *Component) Start() {
-	if len(m.registers) <= 0 {
+func (c *Component) Start() {
+	if len(c.registers) <= 0 {
 		panic(errors.New("no grpc service registered"))
 	}
 
@@ -84,28 +84,28 @@ func (m *Component) Start() {
 		panic(fmt.Errorf("read config failed: %w", err))
 	}
 
-	addr, err := m.detectAddr(conf.Addr)
+	addr, err := c.detectAddr(conf.Addr)
 	if err != nil {
 		panic(fmt.Errorf("get local ip failed: %w", err))
 	}
 
 	if conf.Trace != nil {
-		m.unaryServerInterceptors = append([]grpc.UnaryServerInterceptor{interceptor.UnaryTraceServerInterceptor}, m.unaryServerInterceptors...)
-		m.streamServerInterceptors = append([]grpc.StreamServerInterceptor{interceptor.StreamTraceServerInterceptor}, m.streamServerInterceptors...)
+		c.unaryServerInterceptors = append([]grpc.UnaryServerInterceptor{interceptor.UnaryTraceServerInterceptor}, c.unaryServerInterceptors...)
+		c.streamServerInterceptors = append([]grpc.StreamServerInterceptor{interceptor.StreamTraceServerInterceptor}, c.streamServerInterceptors...)
 	}
 
-	m.grpcServer = grpc.NewServer(
-		grpc.ChainUnaryInterceptor(m.unaryServerInterceptors...),
-		grpc.ChainStreamInterceptor(m.streamServerInterceptors...),
+	c.grpcServer = grpc.NewServer(
+		grpc.ChainUnaryInterceptor(c.unaryServerInterceptors...),
+		grpc.ChainStreamInterceptor(c.streamServerInterceptors...),
 	)
 
-	for _, register := range m.registers {
-		register(m.grpcServer)
+	for _, register := range c.registers {
+		register(c.grpcServer)
 	}
 
 	if conf.HealthCheck {
 		healthCheck := health.NewServer()
-		healthgrpc.RegisterHealthServer(m.grpcServer, healthCheck)
+		healthgrpc.RegisterHealthServer(c.grpcServer, healthCheck)
 		err := app.Bind[*health.Server](healthCheck)
 		if err != nil {
 			slog.Error("bind health check failed", "error", err)
@@ -114,17 +114,17 @@ func (m *Component) Start() {
 	}
 
 	if conf.Reflection {
-		reflection.Register(m.grpcServer)
+		reflection.Register(c.grpcServer)
 	}
 
 	if conf.Trace != nil {
 		var deferFunc func()
-		interceptor.Providers, deferFunc = traceAgent(conf.Trace, m.grpcServer, addr)
+		interceptor.Providers, deferFunc = traceAgent(conf.Trace, c.grpcServer, addr)
 		defer deferFunc()
 	}
 
 	if conf.Registry != nil {
-		defer registerService(conf.Registry, addr, m.grpcServer)()
+		defer registerService(conf.Registry, addr, c.grpcServer)()
 	}
 
 	var lis net.Listener
@@ -134,7 +134,7 @@ func (m *Component) Start() {
 	}
 
 	slog.Info("Serving gRPC on " + conf.Addr)
-	err = m.grpcServer.Serve(lis)
+	err = c.grpcServer.Serve(lis)
 	if err != nil {
 		slog.Error("grpc server shutdown", "error", err)
 	} else {
@@ -142,7 +142,7 @@ func (m *Component) Start() {
 	}
 }
 
-func (m *Component) detectAddr(oriAddr string) (realAddr string, err error) {
+func (c *Component) detectAddr(oriAddr string) (realAddr string, err error) {
 	if oriAddr == "" {
 		return "", nil
 	}
