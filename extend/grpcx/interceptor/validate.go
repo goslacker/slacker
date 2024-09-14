@@ -10,7 +10,25 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func StreamValidateInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	err = validate(srv)
+	if err != nil {
+		return
+	}
+	return handler(srv, ss)
+}
+
 func UnaryValidateInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
+	err = validate(req)
+	if err != nil {
+		return
+	}
+
+	// 调用被拦截的方法
+	return handler(ctx, req)
+}
+
+func validate(req any) (err error) {
 	if req != nil {
 		var v *protovalidate.Validator
 		v, err = protovalidate.New()
@@ -23,7 +41,5 @@ func UnaryValidateInterceptor(ctx context.Context, req interface{}, info *grpc.U
 			return
 		}
 	}
-
-	// 调用被拦截的方法
-	return handler(ctx, req)
+	return
 }

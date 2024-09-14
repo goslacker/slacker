@@ -39,10 +39,38 @@ func (a *JWTAuth) InWhiteList(token string) bool {
 	return ok
 }
 
-func (a *JWTAuth) UnaryAuthInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
-	md, _ := metadata.FromIncomingContext(ctx)
+func (a *JWTAuth) StreamAuthInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	ctx, err := a.auth(ss.Context(), info.FullMethod)
+	if err != nil {
+		return
+	}
+	err = handler(srv, &wrapper{ServerStream: ss, ctx: ctx})
+	return
+}
 
-	if !a.InWhiteList(info.FullMethod) {
+func (a *JWTAuth) UnaryAuthInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
+	ctx, err = a.auth(ctx, info.FullMethod)
+	if err != nil {
+		return
+	}
+
+	// 调用被拦截的方法
+	return handler(ctx, req)
+}
+
+type wrapper struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (w *wrapper) Context() context.Context {
+	return w.ctx
+}
+
+func (a *JWTAuth) auth(ctx context.Context, fullMethod string) (newCtx context.Context, err error) {
+	newCtx = ctx
+	md, _ := metadata.FromIncomingContext(newCtx)
+	if !a.InWhiteList(fullMethod) {
 		var token string
 		if t, ok := md["authorization"]; ok {
 			token = t[0]
@@ -81,16 +109,15 @@ func (a *JWTAuth) UnaryAuthInterceptor(ctx context.Context, req any, info *grpc.
 		}
 
 		if a.check != nil {
-			if err = a.check(ctx, claims); err != nil {
+			if err = a.check(newCtx, claims); err != nil {
 				slog.Debug("check claims failed", "error", err)
 				err = status.New(codes.Unauthenticated, "").Err()
 				return
 			}
 		}
 
-		ctx = context.WithValue(ctx, "claims", claims)
+		newCtx = context.WithValue(newCtx, "claims", claims)
 	}
 
-	// 调用被拦截的方法
-	return handler(ctx, req)
+	return
 }

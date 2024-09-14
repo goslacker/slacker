@@ -17,7 +17,21 @@ import (
 var Providers = map[string]*traceSdk.TracerProvider{}
 
 func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
-	names := strings.Split(strings.Trim(info.FullMethod, "/"), "/")
+	err = traceServer(ctx, info.FullMethod, func(ctx context.Context) (err error) {
+		result, err = handler(ctx, req)
+		return
+	})
+	return
+}
+
+func StreamTraceServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	return traceServer(ss.Context(), info.FullMethod, func(ctx context.Context) error {
+		return handler(srv, &wrapper{ServerStream: ss, ctx: ctx})
+	})
+}
+
+func traceServer(ctx context.Context, fullMethod string, f func(ctx context.Context) error) (err error) {
+	names := strings.Split(strings.Trim(fullMethod, "/"), "/")
 
 	tp, ok := Providers[names[0]]
 	if ok {
@@ -31,7 +45,9 @@ func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grp
 
 	span.SetAttributes(semconv.RPCServiceKey.String(names[0]))
 	span.SetAttributes(semconv.RPCMethodKey.String(names[1]))
-	result, err = handler(newCtx, req)
+
+	err = f(newCtx)
+
 	if err != nil {
 		s, ok := status.FromError(err)
 		if ok {
@@ -41,11 +57,12 @@ func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grp
 		} else {
 			span.SetStatus(codes.Error, err.Error())
 		}
-		return nil, err
+		return err
 	}
 
 	span.SetAttributes(semconv.RPCGRPCStatusCodeKey.Int64(int64(codes.Ok)))
 	span.SetAttributes(semconv.RPCConnectRPCErrorCodeKey.String(codes.Ok.String()))
+
 	return
 }
 
@@ -69,6 +86,22 @@ func startServerSpan(ctx context.Context, name string) (newCtx context.Context, 
 }
 
 func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (err error) {
+	err = traceClient(ctx, method, func(ctx context.Context) (err error) {
+		err = invoker(ctx, method, req, reply, cc, opts...)
+		return
+	})
+	return
+}
+
+func StreamTraceClientInterceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (cs grpc.ClientStream, err error) {
+	err = traceClient(ctx, method, func(ctx context.Context) (err error) {
+		cs, err = streamer(ctx, desc, cc, method, opts...)
+		return
+	})
+	return
+}
+
+func traceClient(ctx context.Context, method string, f func(ctx context.Context) error) (err error) {
 	var srcNames []string
 
 	if srcMethod, ok := grpc.Method(ctx); ok {
@@ -89,7 +122,7 @@ func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply 
 	span.SetAttributes(semconv.RPCServiceKey.String(targetNames[0]))
 	span.SetAttributes(semconv.RPCMethodKey.String(targetNames[1]))
 
-	err = invoker(newCtx, method, req, reply, cc, opts...)
+	err = f(newCtx)
 
 	if err != nil {
 		s, ok := status.FromError(err)
@@ -105,6 +138,7 @@ func UnaryTraceClientInterceptor(ctx context.Context, method string, req, reply 
 
 	span.SetAttributes(semconv.RPCGRPCStatusCodeKey.Int64(int64(codes.Ok)))
 	span.SetAttributes(semconv.RPCConnectRPCErrorCodeKey.String(codes.Ok.String()))
+
 	return
 }
 

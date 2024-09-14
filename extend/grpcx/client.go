@@ -20,7 +20,10 @@ func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) 
 	}
 
 	if conf.Trace != nil {
-		opts = append(opts, grpc.WithUnaryInterceptor(interceptor.UnaryTraceClientInterceptor))
+		opts = append(opts,
+			grpc.WithUnaryInterceptor(interceptor.UnaryTraceClientInterceptor),
+			grpc.WithStreamInterceptor(interceptor.StreamTraceClientInterceptor),
+		)
 	}
 
 	if conf.Registry != nil && registryCache != nil {

@@ -24,7 +24,7 @@ import (
 
 func WithMiddlewares(middlewares ...grpc.UnaryServerInterceptor) func(*Component) {
 	return func(c *Component) {
-		c.middlewares = middlewares
+		c.unaryServerInterceptors = middlewares
 	}
 }
 
@@ -44,16 +44,22 @@ func NewComponent(opts ...func(*Component)) *Component {
 
 type Component struct {
 	app.Component
-	grpcServer  *grpc.Server
-	middlewares []grpc.UnaryServerInterceptor
-	registers   []func(grpc.ServiceRegistrar)
+	grpcServer               *grpc.Server
+	unaryServerInterceptors  []grpc.UnaryServerInterceptor
+	streamServerInterceptors []grpc.StreamServerInterceptor
+	registers                []func(grpc.ServiceRegistrar)
 }
 
 func (c *Component) Init() (err error) {
 	auth := interceptor.NewJWTAuth()
-	c.middlewares = []grpc.UnaryServerInterceptor{
+	c.unaryServerInterceptors = []grpc.UnaryServerInterceptor{
 		interceptor.UnaryValidateInterceptor,
 		auth.UnaryAuthInterceptor,
+	}
+
+	c.streamServerInterceptors = []grpc.StreamServerInterceptor{
+		interceptor.StreamValidateInterceptor,
+		auth.StreamAuthInterceptor,
 	}
 
 	err = app.Bind[*interceptor.JWTAuth](auth)
@@ -84,11 +90,12 @@ func (m *Component) Start() {
 	}
 
 	if conf.Trace != nil {
-		m.middlewares = append(m.middlewares, interceptor.UnaryTraceServerInterceptor)
+		m.unaryServerInterceptors = append(m.unaryServerInterceptors, interceptor.UnaryTraceServerInterceptor)
+		m.streamServerInterceptors = append(m.streamServerInterceptors, interceptor.StreamTraceServerInterceptor)
 	}
 
 	m.grpcServer = grpc.NewServer(
-		grpc.ChainUnaryInterceptor(m.middlewares...),
+		grpc.ChainUnaryInterceptor(m.unaryServerInterceptors...),
 	)
 
 	for _, register := range m.registers {
