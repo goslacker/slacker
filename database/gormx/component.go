@@ -2,6 +2,7 @@ package gormx
 
 import (
 	"database/sql"
+	"github.com/sony/sonyflake"
 	"log"
 	"os"
 	"time"
@@ -37,9 +38,22 @@ func (c *Component) Init() (err error) {
 		return
 	}
 
-	app.Bind[*gorm.DB](db)
+	err = app.Bind[*gorm.DB](db)
+	if err != nil {
+		return
+	}
 
 	sqlDb, _ := db.DB()
-	app.Bind[*sql.DB](sqlDb)
+	err = app.Bind[*sql.DB](sqlDb)
+	if err != nil {
+		return
+	}
+
+	err = app.Bind[*sonyflake.Sonyflake](func() *sonyflake.Sonyflake {
+		return sonyflake.NewSonyflake(sonyflake.Settings{})
+	})
+	if err != nil {
+		return
+	}
 	return
 }
