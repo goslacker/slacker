@@ -21,8 +21,8 @@ func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) 
 
 	if conf.Trace != nil {
 		opts = append(opts,
-			grpc.WithUnaryInterceptor(interceptor.UnaryTraceClientInterceptor),
-			grpc.WithStreamInterceptor(interceptor.StreamTraceClientInterceptor),
+			grpc.WithChainUnaryInterceptor(interceptor.UnaryTraceClientInterceptor, interceptor.UnaryThoughtClientInterceptor),
+			grpc.WithChainStreamInterceptor(interceptor.StreamTraceClientInterceptor, interceptor.StreamThoughtClientInterceptor),
 		)
 	}
 

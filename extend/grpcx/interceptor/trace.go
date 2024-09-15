@@ -110,6 +110,8 @@ func traceClient(ctx context.Context, method string, f func(ctx context.Context)
 
 	if srcMethod, ok := grpc.Method(ctx); ok {
 		srcNames = strings.Split(strings.Trim(srcMethod, "/"), "/")
+	} else { //非grpc没有svr方法,比如grpc-gateway
+		return f(ctx)
 	}
 
 	tp, ok := Providers[srcNames[0]]

@@ -40,9 +40,6 @@ func (a *JWTAuth) InWhiteList(token string) bool {
 }
 
 func (a *JWTAuth) StreamAuthInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	if a.check == nil {
-		return handler(srv, ss)
-	}
 	ctx, err := a.auth(ss.Context(), info.FullMethod)
 	if err != nil {
 		return
@@ -52,9 +49,6 @@ func (a *JWTAuth) StreamAuthInterceptor(srv any, ss grpc.ServerStream, info *grp
 }
 
 func (a *JWTAuth) UnaryAuthInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
-	if a.check == nil {
-		return handler(ctx, req)
-	}
 	ctx, err = a.auth(ctx, info.FullMethod)
 	if err != nil {
 		return
