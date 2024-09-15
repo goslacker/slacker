@@ -266,7 +266,7 @@ func Apply(db *gorm.DB, conditions ...any) (newDB *gorm.DB, err error) {
 				newDB = newDB.Order(item)
 			}
 		default:
-			err = fmt.Errorf("unsupported condition type: %T", condition)
+			err = fmt.Errorf("unsupported condition type: %T <%+v\n>", condition, condition)
 			return
 		}
 	}
