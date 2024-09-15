@@ -18,10 +18,6 @@ type Repository[Entity any] interface {
 	SetM2E(f any)
 }
 
-type ConditionApplier[DB any] interface {
-	Apply(DB) (DB, error)
-}
-
 type Order []string
 
 type Condition []any
