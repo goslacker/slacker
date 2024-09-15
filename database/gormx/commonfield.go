@@ -14,10 +14,14 @@ type UnixTimestampMilli struct {
 	UpdatedAt int64 `json:"updated_at" gorm:"autoUpdateTime:milli"`
 }
 
-type CommonField struct {
-	SnowflakeID
+type UnixTimestamp struct {
 	CreatedAt int64 `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt int64 `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+type CommonField struct {
+	SnowflakeID
+	UnixTimestamp
 }
 
 type SnowflakeID struct {
