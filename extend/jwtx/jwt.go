@@ -1,7 +1,10 @@
 package jwtx
 
 import (
+	"context"
+	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/goslacker/slacker/tool/convert"
 )
 
 const (
@@ -66,4 +69,27 @@ func Parse(token string, key string) (t *jwt.Token, err error) {
 	})
 
 	return
+}
+
+type claimsKey string
+
+const ClaimsKey claimsKey = "claims"
+
+func NewContextWithClaims(ctx context.Context, claims jwt.Claims) context.Context {
+	return context.WithValue(ctx, ClaimsKey, claims)
+}
+
+func FieldFromContext[T any](ctx context.Context, field string) (result T, err error) {
+	tmp := ctx.Value(ClaimsKey)
+	if tmp == nil {
+		err = fmt.Errorf("claims not found")
+		return
+	}
+	claims := tmp.(jwt.MapClaims)
+	v := claims[field]
+	if v == nil {
+		err = fmt.Errorf("field %s not found", field)
+		return
+	}
+	return convert.To[T](v)
 }
