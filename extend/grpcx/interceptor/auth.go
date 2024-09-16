@@ -116,7 +116,7 @@ func (a *JWTAuth) auth(ctx context.Context, fullMethod string) (newCtx context.C
 			}
 		}
 
-		newCtx = context.WithValue(newCtx, "claims", claims)
+		newCtx = jwtx.NewContextWithClaims(ctx, claims)
 	}
 
 	return

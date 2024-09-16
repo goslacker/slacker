@@ -69,6 +69,14 @@ func (c *Component) Init() (err error) {
 	return app.Bind[*Component](c)
 }
 
+func (c *Component) RegisterUnaryInterceptor(interceptors ...grpc.UnaryServerInterceptor) {
+	c.unaryServerInterceptors = append(c.unaryServerInterceptors, interceptors...)
+}
+
+func (c *Component) RegisterStreamInterceptor(interceptors ...grpc.StreamServerInterceptor) {
+	c.streamServerInterceptors = append(c.streamServerInterceptors, interceptors...)
+}
+
 func (c *Component) Register(registers ...func(grpc.ServiceRegistrar)) {
 	c.registers = append(c.registers, registers...)
 }
