@@ -1,17 +1,27 @@
 package coze
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"io"
 	"net/http"
-	"strings"
 	"testing"
 )
 
 func TestXxx(t *testing.T) {
-	data := `{"workflow_id": "7398736121049448488","parameters":{"BOT_USER_INPUT": "测试"}}`
-	req, err := http.NewRequest("POST", "https://api.coze.cn/v1/workflow/stream_run", strings.NewReader(data))
+	data := map[string]any{
+		"workflow_id": "7413652077203947572",
+		"parameters": map[string]any{
+			"history": map[string]string{
+				"role":    "user",
+				"content": "test",
+			},
+		},
+	}
+	j, _ := json.Marshal(data)
+	req, err := http.NewRequest("POST", "https://api.coze.cn/v1/workflow/stream_run", bytes.NewReader(j))
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer ")
 	resp, err := http.DefaultClient.Do(req)
@@ -25,7 +35,9 @@ func TestXxx(t *testing.T) {
 
 func TestClient_WorkflowStream(t *testing.T) {
 	client := NewClient("")
-	msgCh, errCh := client.WorkflowStream(context.Background(), "7398736121049448488", WithParameters(map[string]any{"BOT_USER_INPUT": "测试"}))
+	msgCh, errCh := client.WorkflowStream(context.Background(), "7416260052490010665", WithParameters(map[string]any{"history": []map[string]string{
+		{"role": "user", "content": "test"},
+	}}))
 LOOP:
 	for {
 		select {
