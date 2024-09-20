@@ -63,7 +63,7 @@ func (c *Component) Start() {
 	ctx, c.cancel = context.WithCancel(context.Background())
 
 	endpoint := viper.GetString("grpc.addr")
-	endpoint = strings.Replace(endpoint, "0.0.0.0", "127.0.0.1", 1)
+	//endpoint = strings.Replace(endpoint, "0.0.0.0", "127.0.0.1", 1)
 	conn, err := grpc.NewClient(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("Failed to dial server", "err", err)
