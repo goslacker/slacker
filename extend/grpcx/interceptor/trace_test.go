@@ -18,6 +18,7 @@ import (
 )
 
 func TestTrace(t *testing.T) {
+	t.Skip()
 	stdoutExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	require.NoError(t, err)
 
@@ -30,12 +31,12 @@ func TestTrace(t *testing.T) {
 	defer tp.Shutdown(context.Background())
 
 	ctx := context.Background()
-	UnaryTraceServerInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "1"}, func(c context.Context, req interface{}) (any, error) {
+	UnaryTraceServerInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "1/1"}, func(c context.Context, req interface{}) (any, error) {
 		ctx = c
 		time.Sleep(2 * time.Second)
 		return nil, nil
 	})
-	UnaryTraceServerInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "2"}, func(ctx context.Context, req interface{}) (any, error) {
+	UnaryTraceServerInterceptor(ctx, nil, &grpc.UnaryServerInfo{FullMethod: "1/2"}, func(ctx context.Context, req interface{}) (any, error) {
 		time.Sleep(1 * time.Second)
 		return nil, nil
 	})

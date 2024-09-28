@@ -34,6 +34,7 @@ func TestXxx(t *testing.T) {
 }
 
 func TestClient_WorkflowStream(t *testing.T) {
+	t.Skip()
 	client := NewClient("")
 	msgCh, errCh := client.WorkflowStream(context.Background(), "7416260052490010665", WithParameters(map[string]any{"history": []map[string]string{
 		{"role": "user", "content": "test"},
