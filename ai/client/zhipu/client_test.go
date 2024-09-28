@@ -463,6 +463,7 @@ var productList = `[
 ]`
 
 func TestClient_ChatCompletion(t *testing.T) {
+	t.Skip()
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	c := NewClient("")
 	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
@@ -651,8 +652,9 @@ func TestClient_ChatCompletion(t *testing.T) {
 }
 
 func TestReadPic(t *testing.T) {
+	t.Skip()
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	c := NewClient("0ec138af3eefaaa0865075f94ddd878c.IRR6QbphMcBC7oH6")
+	c := NewClient("")
 	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
 		Model: "glm-4v",
 		Messages: []client.Message{

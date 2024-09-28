@@ -25,6 +25,7 @@ func TestXxx(t *testing.T) {
 }
 
 func TestResponse_ScanSSEAsync(t *testing.T) {
+	t.Skip()
 	data := `{"workflow_id": "7398736121049448488","parameters":{"BOT_USER_INPUT": "测试"}}`
 	client := NewClient()
 	req, err := NewRequest("POST", "https://api.coze.cn/v1/workflow/stream_run", data)

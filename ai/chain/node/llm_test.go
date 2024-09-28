@@ -14,6 +14,7 @@ import (
 )
 
 func TestLLM(t *testing.T) {
+	t.Skip()
 	slog.SetLogLoggerLevel(slog.LevelDebug)
 	llm := &LLM{
 		NodeInfo: chain.NodeInfo{

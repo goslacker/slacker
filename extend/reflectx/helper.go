@@ -39,7 +39,7 @@ func Indirect(v reflect.Value, fillZero bool) (ret reflect.Value) {
 func SetValue(dstValue reflect.Value, srcValue reflect.Value) (err error) {
 	dstValue = Indirect(dstValue, true)
 	srcValue = Indirect(srcValue, false)
-	if dstValue.Type() != srcValue.Type() {
+	if dstValue.Type().Kind() != reflect.Interface && dstValue.Type() != srcValue.Type() {
 		err = fmt.Errorf("type <%s> and <%s> are not same", dstValue.Type().String(), srcValue.Type().String())
 		return
 	}
