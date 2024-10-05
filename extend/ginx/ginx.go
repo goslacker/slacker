@@ -128,7 +128,9 @@ func (g *Ginx) Match(strings []string, s string, a ...any) Router {
 
 func (g *Ginx) Group(s string, a ...any) Router {
 	return &Ginx{
-		router: g.router.Group(s, convertHandlers(a)...),
+		router: g.router.Group(s, slicex.Map(a, func(item any) gin.HandlerFunc {
+			return WrapMiddleware(item)
+		})...),
 	}
 }
 

@@ -34,9 +34,6 @@ func WrapMiddleware(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 		panic(errors.New("func only"))
 	}
 
-	if fType.NumOut() > 1 {
-		panic(errors.New("middleware should return only err"))
-	}
 	return func(ctx *gin.Context) {
 		params, err := buildParams(fType, ctx)
 		if err != nil {
@@ -56,6 +53,7 @@ func WrapMiddleware(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 		response := fromResults(results)
 		if _, ok := response.(*ErrorJsonResponse); ok {
 			response.Do(ctx)
+			return
 		}
 
 		ctx.Next()
