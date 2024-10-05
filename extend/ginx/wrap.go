@@ -9,7 +9,7 @@ import (
 	"github.com/goslacker/slacker/app"
 	"github.com/goslacker/slacker/container"
 	"github.com/goslacker/slacker/extend/reflectx"
-	"github.com/goslacker/slacker/tool/convert"
+	"net/http"
 	"reflect"
 )
 
@@ -40,11 +40,12 @@ func WrapMiddleware(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		params, err := buildParams(fType, ctx)
 		if err != nil {
-			var response *Response
+			response := &ErrorJsonResponse{
+				Message:    fmt.Errorf("build params failed: %w", err).Error(),
+				StatusCode: http.StatusInternalServerError,
+			}
 			if opt.NotAbortWhenErr {
-				response = NewErrorResponse(fmt.Errorf("build params failed: %w", err))
-			} else {
-				response = NewErrorResponse(fmt.Errorf("build params failed: %w", err), WithEnableAbort())
+				response.Abort = true
 			}
 			response.Do(ctx)
 			return
@@ -52,19 +53,12 @@ func WrapMiddleware(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 
 		results := reflect.ValueOf(f).Call(params)
 
-		if len(results) == 0 || results[0].IsNil() {
-			ctx.Next()
-			return
+		response := fromResults(results)
+		if _, ok := response.(*ErrorJsonResponse); ok {
+			response.Do(ctx)
 		}
 
-		var response *Response
-		err = results[0].Interface().(error)
-		if opt.NotAbortWhenErr {
-			response = NewErrorResponse(fmt.Errorf("build params failed: %w", err))
-		} else {
-			response = NewErrorResponse(fmt.Errorf("build params failed: %w", err), WithEnableAbort())
-		}
-		response.Do(ctx)
+		ctx.Next()
 		return
 	}
 }
@@ -80,32 +74,15 @@ func WrapEndpoint(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 		panic(errors.New("func only"))
 	}
 
-	if fType.NumOut() > 3 {
-		panic(errors.New("should not return results more than 3"))
-	}
-
-	switch fType.NumOut() {
-	case 2:
-		if !fType.Out(1).Implements(reflect.TypeOf((*error)(nil)).Elem()) {
-			panic(errors.New("second one of results should be error"))
-		}
-	case 3:
-		if !fType.Out(2).Implements(reflect.TypeOf((*error)(nil)).Elem()) {
-			panic(errors.New("third one of results should be error"))
-		}
-		if !isNumber(fType.Out(0)) && fType.Out(0).Name() != "IMeta" {
-			panic(errors.New("first one of results should be number(total of records) or IMeta"))
-		}
-	}
-
 	return func(ctx *gin.Context) {
 		params, err := buildParams(fType, ctx)
 		if err != nil {
-			var response *Response
+			response := &ErrorJsonResponse{
+				Message:    fmt.Errorf("build params failed: %w", err).Error(),
+				StatusCode: http.StatusInternalServerError,
+			}
 			if opt.NotAbortWhenErr {
-				response = NewErrorResponse(fmt.Errorf("build params failed: %w", err))
-			} else {
-				response = NewErrorResponse(fmt.Errorf("build params failed: %w", err), WithEnableAbort())
+				response.Abort = true
 			}
 			response.Do(ctx)
 			return
@@ -113,81 +90,8 @@ func WrapEndpoint(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 
 		results := reflect.ValueOf(f).Call(params)
 
-		parseToResponse(!opt.NotAbortWhenErr, results...).Do(ctx)
-	}
-}
-
-func parseToResponse(shouldAbort bool, results ...reflect.Value) (resp *Response) {
-	switch len(results) {
-	case 0:
-		resp = NewSuccessResponse(nil, nil)
-	case 1:
-		r := results[0].Interface()
-		if r == nil {
-			resp = NewSuccessResponse(nil, nil)
-			break
-		}
-		switch x := r.(type) {
-		case error:
-			if shouldAbort {
-				resp = NewErrorResponse(x, WithEnableAbort())
-			} else {
-				resp = NewErrorResponse(x)
-			}
-		case IFile:
-			resp = NewFileResponse(x)
-		default:
-			resp = NewSuccessResponse(x, nil)
-		}
-	case 2:
-		if err, ok := results[1].Interface().(error); ok && err != nil {
-			if shouldAbort {
-				resp = NewErrorResponse(err, WithEnableAbort())
-			} else {
-				resp = NewErrorResponse(err)
-			}
-			break
-		}
-		switch x := results[0].Interface().(type) {
-		case IFile:
-			resp = NewFileResponse(x)
-		default:
-			resp = NewSuccessResponse(x, nil)
-		}
-	case 3:
-		if err, ok := results[1].Interface().(error); ok && err != nil {
-			if shouldAbort {
-				resp = NewErrorResponse(err, WithEnableAbort())
-			} else {
-				resp = NewErrorResponse(err)
-			}
-			break
-		}
-
-		if isNumber(results[0]) {
-			tmp, err := convert.ToKindValue(results[0], reflect.Int)
-			if err != nil {
-				panic(err)
-			}
-			resp = NewSuccessResponse(results[1].Interface(), &Meta{Total: uint(tmp.Interface().(int))})
-		} else if m, ok := results[0].Interface().(IMeta); ok {
-			resp = NewSuccessResponse(results[1].Interface(), m)
-		} else {
-			panic(errors.New("three results only for pagination"))
-		}
-	}
-
-	return
-}
-
-func isNumber(v interface{ Kind() reflect.Kind }) bool {
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
-		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
-		reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
-		return true
-	default:
-		return false
+		response := fromResults(results)
+		response.Do(ctx)
 	}
 }
 
