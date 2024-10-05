@@ -2,14 +2,6 @@ package middleware
 
 import "github.com/gin-gonic/gin"
 
-func Options(c *gin.Context) {
-	if c.Request.Method == "OPTIONS" {
-		c.AbortWithStatus(204)
-		return
-	}
-	c.Next()
-}
-
 func CORS(c *gin.Context) {
 	c.Writer.Header().Set("Access-Control-Allow-Origin", c.Request.Header.Get("Origin"))
 	c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
