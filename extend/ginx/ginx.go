@@ -18,7 +18,7 @@ func NewGinx() *Ginx {
 }
 
 type Ginx struct {
-	app.IsComponent
+	app.Component
 	router gin.IRouter
 	svr    *http.Server
 }
