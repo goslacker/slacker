@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/goslacker/slacker/extend/slicex"
+	"github.com/goslacker/slacker/core/slicex"
 	"log/slog"
 	"net/http"
 	"strconv"

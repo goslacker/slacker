@@ -1,7 +1,7 @@
 package coze
 
 import (
-	"github.com/goslacker/slacker/extend/httpx"
+	"github.com/goslacker/slacker/core/httpx"
 	"net/http"
 )
 
