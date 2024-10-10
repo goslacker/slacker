@@ -304,6 +304,7 @@ type Struct1112 struct {
 type Struct1113 Struct1112
 
 func NewStruct2(s1 *Struct1) *Struct2 {
+	println("2")
 	return &Struct2{
 		S1: s1,
 		A:  2,
@@ -316,6 +317,7 @@ type Struct2 struct {
 }
 
 func NewStruct1(s2 *Struct2) *Struct1 {
+	println("1")
 	return &Struct1{
 		S2: s2,
 		A:  1,
@@ -328,6 +330,7 @@ type Struct1 struct {
 }
 
 func NewStruct11(s12 *Struct12) *Struct11 {
+	println("11")
 	return &Struct11{
 		s12: s12,
 	}
@@ -338,6 +341,7 @@ type Struct11 struct {
 }
 
 func NewStruct12(s13 *Struct13) *Struct12 {
+	println("12")
 	return &Struct12{
 		s13: s13,
 	}
@@ -348,6 +352,7 @@ type Struct12 struct {
 }
 
 func NewStruct13(s11 *Struct11) *Struct13 {
+	println("13")
 	return &Struct13{
 		s11: s11,
 	}
