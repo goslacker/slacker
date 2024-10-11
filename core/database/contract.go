@@ -22,6 +22,8 @@ type Order []string
 
 type Condition []any
 
+type Limit int
+
 type Migrator interface {
 	RegisterMigrates(...any) error
 	Migrate() error

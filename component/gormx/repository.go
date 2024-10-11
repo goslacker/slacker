@@ -265,6 +265,8 @@ func Apply(db *gorm.DB, conditions ...any) (newDB *gorm.DB, err error) {
 			for _, item := range x {
 				newDB = newDB.Order(item)
 			}
+		case database.Limit:
+			newDB = newDB.Limit(int(x))
 		default:
 			err = fmt.Errorf("unsupported condition type: %T <%+v\n>", condition, condition)
 			return
