@@ -9,7 +9,10 @@ import (
 
 func NewPageFromCtx(ctx *gin.Context, defaultSize int) *Page {
 	m := &Page{}
-	ctx.ShouldBindQuery(m)
+	err := ctx.ShouldBindQuery(m)
+	if err != nil {
+		panic(err)
+	}
 	if m.Page == 0 {
 		m.Page = 1
 	}
@@ -22,6 +25,10 @@ func NewPageFromCtx(ctx *gin.Context, defaultSize int) *Page {
 type Page struct {
 	Page int `form:"page"`
 	Size int `form:"size"`
+}
+
+func (p *Page) Offset() int {
+	return (p.Page - 1) * p.Size
 }
 
 func NewFiltersFromCtx(ctx *gin.Context) *Filters {
