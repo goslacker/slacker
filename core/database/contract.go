@@ -24,6 +24,8 @@ type Condition []any
 
 type Limit int
 
+type Offset int
+
 type Migrator interface {
 	RegisterMigrates(...any) error
 	Migrate() error
