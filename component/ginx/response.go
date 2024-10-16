@@ -1,7 +1,10 @@
 package ginx
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/goslacker/slacker/core/errx"
+	"github.com/goslacker/slacker/core/tool"
 	"net/http"
 	"reflect"
 )
@@ -24,10 +27,8 @@ func fromResults(results []reflect.Value) Response {
 	last := results[len(results)-1]
 	if last.IsValid() && !last.IsZero() {
 		if last.Type().Implements(reflect.TypeOf((*error)(nil)).Elem()) {
-			r := &ErrorJsonResponse{
-				Message:    last.Interface().(error).Error(),
-				StatusCode: http.StatusInternalServerError,
-			}
+			r := ResponseFromError(last.Interface().(error))
+
 			for _, result := range results {
 				if result.Kind() == reflect.Int {
 					r.StatusCode = result.Interface().(int)
@@ -35,6 +36,7 @@ func fromResults(results []reflect.Value) Response {
 					r.Abort = result.Interface().(bool)
 				}
 			}
+
 			return r
 		}
 	}
@@ -112,10 +114,36 @@ func (sr *SuccessJsonResponse) Do(ctx *gin.Context) {
 	ctx.JSON(sr.StatusCode, sr)
 }
 
+func ResponseFromError(err error) *ErrorJsonResponse {
+	r := &ErrorJsonResponse{
+		StatusCode: http.StatusInternalServerError,
+	}
+	switch x := err.(type) {
+	case *errx.Error:
+		r.Message = x.Error()
+		if http.StatusText(x.Code) == "" {
+			r.Code = tool.Reference(x.Code)
+		} else {
+			r.StatusCode = x.Code
+		}
+		if x.Detail != nil && len(x.Detail) > 0 {
+			r.Detail = x.Detail
+		}
+	case error:
+		r.Message = x.Error()
+	default:
+		panic(fmt.Errorf("not a error: %#v", err))
+	}
+
+	return r
+}
+
 type ErrorJsonResponse struct {
-	Message    string `json:"message"`
-	StatusCode int    `json:"-"`
-	Abort      bool   `json:"-"`
+	Message    string         `json:"message"`
+	Detail     map[string]any `json:"detail,omitempty"`
+	Code       *int           `json:"code,omitempty"`
+	StatusCode int            `json:"-"`
+	Abort      bool           `json:"-"`
 }
 
 func (er *ErrorJsonResponse) Do(ctx *gin.Context) {
@@ -149,118 +177,3 @@ type File interface {
 	MimeType() string
 	Content() []byte
 }
-
-//
-//type IMeta interface {
-//	GetMeta() map[string]any
-//}
-//
-//type Meta struct {
-//	CurrentPage uint
-//	Total       uint
-//	LastPage    uint
-//	PerPage     uint
-//}
-//
-//func (m *Meta) GetMeta() (result map[string]any) {
-//	result = make(map[string]any)
-//	if m.CurrentPage != 0 {
-//		result["currentPage"] = m.CurrentPage
-//	}
-//	result["total"] = m.Total
-//	if m.LastPage != 0 {
-//		result["lastPage"] = m.LastPage
-//	}
-//	if m.PerPage != 0 {
-//		result["perPage"] = m.PerPage
-//	}
-//	return
-//}
-//
-//func WithHttpStatusCode(code int) func(*Response) {
-//	return func(response *Response) {
-//		response.code = code
-//	}
-//}
-//
-//func WithEnableAbort() func(*Response) {
-//	return func(response *Response) {
-//		response.abort = true
-//	}
-//}
-//
-//func NewSuccessResponse(data any, meta IMeta, opts ...func(response *Response)) *Response {
-//	r := &Response{
-//		Data: data,
-//		code: http.StatusOK,
-//	}
-//	if meta != nil {
-//		r.Meta = meta.GetMeta()
-//	}
-//	for _, opt := range opts {
-//		opt(r)
-//	}
-//	return r
-//}
-//
-//func NewFileResponse(file IFile, opts ...func(response *Response)) *Response {
-//	r := &Response{
-//		file: file,
-//		code: http.StatusOK,
-//	}
-//	for _, opt := range opts {
-//		opt(r)
-//	}
-//	return r
-//}
-//
-//func NewErrorResponse(err error, opts ...func(response *Response)) *Response {
-//	r := &Response{
-//		err:  err,
-//		code: http.StatusInternalServerError,
-//	}
-//	for _, opt := range opts {
-//		opt(r)
-//	}
-//	return r
-//}
-//
-//type Response struct {
-//	Data    any            `json:"data"`
-//	Message string         `json:"message"`
-//	Meta    map[string]any `json:"meta,omitempty"`
-//	file    IFile
-//	meta    IMeta
-//	err     error
-//	code    int
-//	abort   bool
-//}
-//
-//func (r *Response) Do(ctx *gin.Context) {
-//	if r.err != nil {
-//		r.Data = nil
-//		r.Message = r.err.Error()
-//		if r.abort {
-//			ctx.AbortWithStatusJSON(r.code, r)
-//		} else {
-//			ctx.JSON(r.code, r)
-//		}
-//		return
-//	}
-//
-//	if r.file != nil {
-//		ctx.Status(http.StatusOK)
-//		if r.file.MimeType() != "" {
-//			ctx.Writer.Header().Add("Content-Type", r.file.MimeType())
-//		} else {
-//			ctx.Writer.Header().Add("Content-Type", "application/octet-stream")
-//		}
-//		if r.file.Name() != "" {
-//			ctx.Writer.Header().Add("Content-Disposition", "attachment; filename=\""+r.file.Name()+"\"")
-//		}
-//		_, _ = ctx.Writer.Write(r.file.Content())
-//		return
-//	}
-//
-//	ctx.JSON(r.code, r)
-//}
