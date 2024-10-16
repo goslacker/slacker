@@ -2,12 +2,12 @@ package ginx
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/goslacker/slacker/core/app"
 	"github.com/goslacker/slacker/core/container"
+	"github.com/goslacker/slacker/core/errx"
 	"github.com/goslacker/slacker/core/reflectx"
 	"net/http"
 	"reflect"
@@ -37,10 +37,7 @@ func WrapMiddleware(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		params, err := buildParams(fType, ctx)
 		if err != nil {
-			response := &ErrorJsonResponse{
-				Message:    fmt.Errorf("build params failed: %w", err).Error(),
-				StatusCode: http.StatusInternalServerError,
-			}
+			response := ResponseFromError(err)
 			if opt.NotAbortWhenErr {
 				response.Abort = true
 			}
@@ -75,10 +72,7 @@ func WrapEndpoint(f any, opts ...func(*handlerOpts)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		params, err := buildParams(fType, ctx)
 		if err != nil {
-			response := &ErrorJsonResponse{
-				Message:    fmt.Errorf("build params failed: %w", err).Error(),
-				StatusCode: http.StatusInternalServerError,
-			}
+			response := ResponseFromError(err)
 			if opt.NotAbortWhenErr {
 				response.Abort = true
 			}
@@ -144,6 +138,7 @@ func parseParam(ctx *gin.Context, t reflect.Type) (p reflect.Value, err error) {
 
 		err = binding.Validator.ValidateStruct(psrc.Interface())
 		if err != nil {
+			err = errx.Wrap(err, errx.WithMsg(err.Error()), errx.WithCode(http.StatusUnprocessableEntity))
 			return
 		}
 
