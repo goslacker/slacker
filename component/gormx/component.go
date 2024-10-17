@@ -24,14 +24,38 @@ type Component struct {
 }
 
 func (c *Component) Init() (err error) {
-	conf := viper.Sub("database")
+	conf := viper.Sub("gormx")
+	mysqlLogger := conf.GetStringMap("logger")
+	// 默认配置
+	defaultLogger := map[string]interface{}{
+		"slow_threshold":                200,
+		"log_level":                     4,
+		"ignore_record_not_found_error": true,
+		"colorful":                      true,
+		"parameterized_queries":         true,
+	}
+
+	// 检查是否有缺失配置
+	for key, value := range defaultLogger {
+		if _, exists := mysqlLogger[key]; !exists {
+			mysqlLogger[key] = value
+		}
+	}
+
+	slowThreshold := mysqlLogger["slow_threshold"].(int)
+	logLevel := mysqlLogger["log_level"].(int)
+	ignoreRecordNotFoundError := mysqlLogger["ignore_record_not_found_error"].(bool)
+	colorful := mysqlLogger["colorful"].(bool)
+	parameterizedQueries := mysqlLogger["parameterized_queries"].(bool)
 	dsn := database.DSN(conf.GetString("dsn"))
+
 	db, err := gorm.Open(mysql.Open(dsn.RemoveSchema()), &gorm.Config{
 		Logger: logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
-			SlowThreshold:             200 * time.Millisecond,
-			LogLevel:                  logger.Warn,
-			IgnoreRecordNotFoundError: true,
-			Colorful:                  true,
+			SlowThreshold:             time.Duration(slowThreshold) * time.Millisecond,
+			LogLevel:                  logger.LogLevel(logLevel),
+			IgnoreRecordNotFoundError: ignoreRecordNotFoundError,
+			Colorful:                  colorful,
+			ParameterizedQueries:      parameterizedQueries,
 		}),
 	})
 	if err != nil {
