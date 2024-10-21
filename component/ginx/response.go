@@ -71,13 +71,12 @@ func fromResults(results []reflect.Value) Response {
 		}
 		if result.Type() == reflect.TypeOf(Meta{}) {
 			sr.Meta = result.Interface().(Meta)
-		} else if result.Kind() == reflect.Struct ||
-			result.Kind() == reflect.Map ||
-			(result.Kind() == reflect.Pointer && result.Elem().Kind() == reflect.Map) ||
-			(result.Kind() == reflect.Pointer && result.Elem().Kind() == reflect.Struct) {
-			sr.Data = result.Interface()
 		} else if result.Kind() == reflect.Int {
 			sr.StatusCode = result.Interface().(int)
+		} else {
+			if sr.Data == nil {
+				sr.Data = result.Interface()
+			}
 		}
 	}
 	return sr
