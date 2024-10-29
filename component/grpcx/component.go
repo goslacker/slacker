@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net"
+	"strings"
+
 	"github.com/goslacker/slacker/component/grpcx/interceptor"
 	"github.com/goslacker/slacker/core/app"
 	"github.com/goslacker/slacker/core/serviceregistry"
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
 	"github.com/goslacker/slacker/core/tool"
 	"github.com/goslacker/slacker/core/trace"
-	"log/slog"
-	"net"
-	"strings"
 
 	"github.com/spf13/viper"
 	traceSdk "go.opentelemetry.io/otel/sdk/trace"
@@ -87,7 +88,7 @@ func (c *Component) Start() {
 	}
 
 	var conf Config
-	err := viper.Sub("grpc").Unmarshal(&conf)
+	err := viper.Sub("grpcx").Unmarshal(&conf)
 	if err != nil {
 		panic(fmt.Errorf("read config failed: %w", err))
 	}
