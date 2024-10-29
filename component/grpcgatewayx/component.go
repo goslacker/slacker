@@ -3,17 +3,20 @@ package grpcgatewayx
 import (
 	"context"
 	"fmt"
-	"github.com/goslacker/slacker/core/app"
 	"log/slog"
 	"net/http"
 	"strings"
 
+	"github.com/goslacker/slacker/core/app"
+
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
 	"github.com/spf13/viper"
+	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/protobuf/proto"
 )
 
 func WithRegisters(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) func(*Component) {
@@ -58,12 +61,16 @@ func (c *Component) Start() {
 		slog.Warn("no gateway register")
 		return
 	}
+	conf := viper.Sub("grpcgatewayx")
+	if conf == nil {
+		slog.Error("no grpc gateway config")
+		return
+	}
 
 	var ctx context.Context
 	ctx, c.cancel = context.WithCancel(context.Background())
 
-	endpoint := viper.GetString("grpc.addr")
-	//endpoint = strings.Replace(endpoint, "0.0.0.0", "127.0.0.1", 1)
+	endpoint := conf.GetString("endpoint")
 	conn, err := grpc.NewClient(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("Failed to dial server", "err", err)
@@ -84,7 +91,9 @@ func (c *Component) Start() {
 		}()
 	}()
 
-	mux := runtime.NewServeMux()
+	mux := runtime.NewServeMux(
+		runtime.WithForwardResponseRewriter(responseBuilder(conf)),
+	)
 	for _, register := range c.registers {
 		err := register(ctx, mux, conn)
 		if err != nil {
@@ -103,11 +112,11 @@ func (c *Component) Start() {
 	withCors := cors.AllowAll().Handler(mux)
 
 	c.gwServer = &http.Server{
-		Addr:    viper.Sub("grpcGateway").GetString("addr"),
+		Addr:    conf.GetString("addr"),
 		Handler: withCors,
 	}
 
-	slog.Info("Serving gRPC-Gateway on " + viper.Sub("grpcGateway").GetString("addr"))
+	slog.Info("Serving gRPC-Gateway on " + conf.GetString("addr"))
 	slog.Error("grpc gateway server shutdown", "err", c.gwServer.ListenAndServe())
 }
 
@@ -118,5 +127,22 @@ func (c *Component) Stop() {
 	c.gwServer.Shutdown(ctx)
 	if c.cancel != nil {
 		c.cancel()
+	}
+}
+
+func responseBuilder(c *viper.Viper) runtime.ForwardResponseRewriter {
+	return func(ctx context.Context, response proto.Message) (any, error) {
+		resp := make(map[string]any)
+		if s, ok := response.(*status.Status); ok {
+			if http.StatusText(int(s.Code)) == "" && (s.Code < 0 && s.Code > 17) {
+				resp["code"] = s.Code
+			}
+			resp["message"] = s.Message
+			resp["data"] = nil
+		} else {
+			resp["data"] = response
+			resp["message"] = ""
+		}
+		return resp, nil
 	}
 }
