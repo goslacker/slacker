@@ -3,6 +3,7 @@ package grpcgatewayx
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -140,7 +141,11 @@ func responseBuilder(c *viper.Viper) runtime.ForwardResponseRewriter {
 			resp["message"] = s.Message
 			resp["data"] = nil
 		} else {
-			resp["data"] = response
+			if _, ok := response.(*emptypb.Empty); ok {
+				resp["data"] = nil
+			} else {
+				resp["data"] = response
+			}
 			resp["message"] = ""
 		}
 		return resp, nil
