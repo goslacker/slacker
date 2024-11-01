@@ -14,7 +14,7 @@ var registryCache registry.ServiceRegistry
 
 func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) T, opts ...grpc.DialOption) (result T, err error) {
 	var conf Config
-	err = viper.Sub("grpc").Unmarshal(&conf)
+	err = viper.Sub("grpcx").Unmarshal(&conf)
 	if err != nil {
 		return
 	}
