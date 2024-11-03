@@ -21,7 +21,8 @@ func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
 	case reflect.Slice:
 		return SliceValueTo(dst, src)
 	default:
-		return reflectx.SetValue(dst, src)
+		reflectx.SetValue(dst, src)
+		return
 	}
 }
 
@@ -31,7 +32,7 @@ func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	case reflect.Struct:
 		return StructValueToStruct(dst, src)
 	default:
-		err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
+		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
 	}
 }
