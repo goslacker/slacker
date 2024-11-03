@@ -40,18 +40,26 @@ func (a *JWTAuth) InWhiteList(token string) bool {
 }
 
 func (a *JWTAuth) StreamAuthInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	ctx, err := a.auth(ss.Context(), info.FullMethod)
-	if err != nil {
-		return
+	if a.check != nil {
+		var ctx context.Context
+		ctx, err = a.auth(ss.Context(), info.FullMethod)
+		if err != nil {
+			return
+		}
+		err = handler(srv, &wrapper{ServerStream: ss, ctx: ctx})
+	} else {
+		err = handler(srv, ss)
 	}
-	err = handler(srv, &wrapper{ServerStream: ss, ctx: ctx})
+
 	return
 }
 
 func (a *JWTAuth) UnaryAuthInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (result any, err error) {
-	ctx, err = a.auth(ctx, info.FullMethod)
-	if err != nil {
-		return
+	if a.check != nil {
+		ctx, err = a.auth(ctx, info.FullMethod)
+		if err != nil {
+			return
+		}
 	}
 
 	// 调用被拦截的方法
