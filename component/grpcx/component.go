@@ -54,11 +54,13 @@ type Component struct {
 func (c *Component) Init() (err error) {
 	auth := interceptor.NewJWTAuth()
 	c.unaryServerInterceptors = []grpc.UnaryServerInterceptor{
+		interceptor.UnaryErrorInterceptor,
 		auth.UnaryAuthInterceptor,
 		interceptor.UnaryValidateInterceptor,
 	}
 
 	c.streamServerInterceptors = []grpc.StreamServerInterceptor{
+		interceptor.StreamErrorInterceptor,
 		auth.StreamAuthInterceptor,
 		interceptor.StreamValidateInterceptor,
 	}
