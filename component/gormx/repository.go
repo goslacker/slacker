@@ -15,8 +15,8 @@ import (
 func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Repository[Entity])) *Repository[PO, Entity] {
 	r := &Repository[PO, Entity]{
 		DB:  db,
-		m2e: database.DefaultM2E[PO, Entity],
-		e2m: database.DefaultE2M[PO, Entity],
+		M2E: database.DefaultM2E[PO, Entity],
+		E2M: database.DefaultE2M[PO, Entity],
 	}
 
 	for _, opt := range opts {
@@ -29,16 +29,16 @@ func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Reposi
 type Repository[PO any, Entity any] struct {
 	DB  *gorm.DB
 	ctx context.Context
-	m2e func(dst *Entity, src *PO) error
-	e2m func(dst *PO, src *Entity) error
+	M2E func(dst *Entity, src *PO) error
+	E2M func(dst *PO, src *Entity) error
 }
 
 func (r *Repository[PO, Entity]) SetE2M(f any) {
-	r.e2m = f.(func(dst *PO, src *Entity) error)
+	r.E2M = f.(func(dst *PO, src *Entity) error)
 }
 
 func (r *Repository[PO, Entity]) SetM2E(f any) {
-	r.m2e = f.(func(dst *Entity, src *PO) error)
+	r.M2E = f.(func(dst *Entity, src *PO) error)
 }
 
 func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) database.Repository[Entity] {
@@ -59,7 +59,7 @@ func (r *Repository[PO, Entity]) Create(entities ...*Entity) (err error) {
 	pos := make([]*PO, 0, len(entities))
 	for _, item := range entities {
 		po := new(PO)
-		err = r.e2m(po, item)
+		err = r.E2M(po, item)
 		if err != nil {
 			return
 		}
@@ -72,7 +72,7 @@ func (r *Repository[PO, Entity]) Create(entities ...*Entity) (err error) {
 	}
 
 	for index, item := range pos {
-		err = r.m2e(entities[index], item)
+		err = r.M2E(entities[index], item)
 		if err != nil {
 			return
 		}
@@ -84,7 +84,7 @@ func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err
 	switch x := entityOrMap.(type) {
 	case *Entity:
 		po := new(PO)
-		err = r.e2m(po, x)
+		err = r.E2M(po, x)
 		if err != nil {
 			return
 		}
@@ -92,7 +92,7 @@ func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err
 		if err != nil {
 			return
 		}
-		err = r.m2e(x, po)
+		err = r.M2E(x, po)
 		if err != nil {
 			return
 		}
@@ -125,7 +125,7 @@ func (r *Repository[PO, Entity]) First(conditions ...any) (entity *Entity, err e
 	}
 
 	entity = new(Entity)
-	err = r.m2e(entity, po)
+	err = r.M2E(entity, po)
 	return
 }
 
@@ -144,7 +144,7 @@ func (r *Repository[PO, Entity]) List(conditions ...any) (list []*Entity, err er
 	list = make([]*Entity, 0, len(poList))
 	for _, item := range poList {
 		var dst Entity
-		err = r.m2e(&dst, &item)
+		err = r.M2E(&dst, &item)
 		if err != nil {
 			return
 		}
@@ -183,7 +183,7 @@ func (r *Repository[PO, Entity]) Pagination(offset int, limit int, conditions ..
 	list = make([]*Entity, 0, len(poList))
 	for _, item := range poList {
 		var dst Entity
-		err = r.m2e(&dst, &item)
+		err = r.M2E(&dst, &item)
 		if err != nil {
 			return
 		}
