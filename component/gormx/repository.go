@@ -164,7 +164,7 @@ func (r *Repository[PO, Entity]) Delete(conditions ...any) (err error) {
 	return
 }
 
-func (r *Repository[PO, Entity]) Pagination(offset int, limit int, conditions ...any) (total int64, list []*Entity, err error) {
+func (r *Repository[PO, Entity]) PaginationByOffset(offset int, limit int, conditions ...any) (total int64, list []*Entity, err error) {
 	db, err := Apply(r.DB, conditions...)
 	if err != nil {
 		return
@@ -191,6 +191,14 @@ func (r *Repository[PO, Entity]) Pagination(offset int, limit int, conditions ..
 	}
 
 	return
+}
+
+func (r *Repository[PO, Entity]) Pagination(page int, size int, conditions ...any) (total int64, list []*Entity, err error) {
+	if size == 0 {
+		size = 15
+	}
+	offset := (page - 1) * size
+	return r.PaginationByOffset(offset, size, conditions...)
 }
 
 func (r *Repository[PO, Entity]) Transaction(f func(ctx context.Context) error) (err error) {

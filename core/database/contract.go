@@ -9,7 +9,10 @@ type Repository[Entity any] interface {
 	First(conditions ...any) (*Entity, error)
 	List(conditions ...any) ([]*Entity, error)
 	Delete(conditions ...any) error
-	Pagination(offset, limit int, conditions ...any) (total int64, list []*Entity, err error)
+	// PaginationByOffset 通过偏移分页查询
+	PaginationByOffset(offset int, limit int, conditions ...any) (total int64, list []*Entity, err error)
+	// Pagination 通过页数分页查询
+	Pagination(page, size int, conditions ...any) (total int64, list []*Entity, err error)
 	Transaction(f func(ctx context.Context) error) (err error)
 	Begin() (ctx context.Context)
 	Commit(ctx context.Context) (err error)
