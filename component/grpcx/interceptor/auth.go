@@ -40,7 +40,7 @@ func (a *JWTAuth) InWhiteList(token string) bool {
 }
 
 func (a *JWTAuth) StreamAuthInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
-	if a.check != nil {
+	if a.check != nil && info.FullMethod != "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo" {
 		var ctx context.Context
 		ctx, err = a.auth(ss.Context(), info.FullMethod)
 		if err != nil {

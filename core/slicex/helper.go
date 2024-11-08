@@ -93,6 +93,7 @@ func SameItem[T comparable](s ...T) bool {
 	return true
 }
 
+// Map maps the slice to a new slice by applying the function to each element.
 func Map[T any, R any](s []T, f func(item T) R) []R {
 	ret := make([]R, 0, len(s))
 	for _, item := range s {
@@ -109,4 +110,15 @@ func Filter[T any](s []T, f func(item T) bool) []T {
 		}
 	}
 	return tmp
+}
+
+// ToMap convert a slice to a map, with specified key and value using the function.
+func ToMap[T any, K comparable, V any](s []T, f func(item T) (key K, value V)) map[K]V {
+	m := make(map[K]V, len(s))
+	for _, item := range s {
+		key, value := f(item)
+		m[key] = value
+	}
+
+	return m
 }

@@ -25,6 +25,9 @@ func UnaryTraceServerInterceptor(ctx context.Context, req interface{}, info *grp
 }
 
 func StreamTraceServerInterceptor(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	if info.FullMethod == "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo" {
+		return handler(srv, ss)
+	}
 	return traceServer(ss.Context(), info.FullMethod, func(ctx context.Context) error {
 		return handler(srv, &wrapper{ServerStream: ss, ctx: ctx})
 	})
