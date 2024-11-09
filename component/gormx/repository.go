@@ -197,6 +197,9 @@ func (r *Repository[PO, Entity]) Pagination(page int, size int, conditions ...an
 	if size == 0 {
 		size = 15
 	}
+	if page == 0 {
+		page = 1
+	}
 	offset := (page - 1) * size
 	return r.PaginationByOffset(offset, size, conditions...)
 }
