@@ -33,15 +33,43 @@ func NewComponent(opts ...func(*Component)) *Component {
 	for _, opt := range opts {
 		opt(c)
 	}
+	c.forwardResponseRewriter = func(ctx context.Context, response proto.Message) (any, error) {
+		resp := make(map[string]any)
+		if s, ok := response.(*status.Status); ok {
+			if http.StatusText(int(s.Code)) == "" && (s.Code < 0 && s.Code > 17) {
+				resp["code"] = s.Code
+			}
+			resp["message"] = s.Message
+			resp["data"] = nil
+		} else {
+			if _, ok := response.(*emptypb.Empty); ok {
+				resp["data"] = nil
+			} else {
+				resp["data"] = response
+			}
+			resp["message"] = ""
+		}
+		return resp, nil
+	}
 	return c
 }
 
 type Component struct {
 	app.Component
-	cancel    context.CancelFunc
-	registers []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
-	handlers  map[string]runtime.HandlerFunc
-	gwServer  *http.Server
+	cancel                  context.CancelFunc
+	registers               []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
+	handlers                map[string]runtime.HandlerFunc
+	gwServer                *http.Server
+	forwardResponseRewriter runtime.ForwardResponseRewriter
+	errorHandler            runtime.ErrorHandlerFunc
+}
+
+func (c *Component) SetForwardResponseRewriter(f runtime.ForwardResponseRewriter) {
+	c.forwardResponseRewriter = f
+}
+
+func (c *Component) SetErrorHandler(f runtime.ErrorHandlerFunc) {
+	c.errorHandler = f
 }
 
 func (c *Component) Register(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
@@ -92,9 +120,14 @@ func (c *Component) Start() {
 		}()
 	}()
 
-	mux := runtime.NewServeMux(
-		runtime.WithForwardResponseRewriter(responseBuilder(conf)),
-	)
+	options := make([]runtime.ServeMuxOption, 0, 5)
+	if c.forwardResponseRewriter != nil {
+		options = append(options, runtime.WithForwardResponseRewriter(c.forwardResponseRewriter))
+	}
+	if c.errorHandler != nil {
+		options = append(options, runtime.WithErrorHandler(c.errorHandler))
+	}
+	mux := runtime.NewServeMux(options...)
 	for _, register := range c.registers {
 		err := register(ctx, mux, conn)
 		if err != nil {
@@ -128,26 +161,5 @@ func (c *Component) Stop() {
 	c.gwServer.Shutdown(ctx)
 	if c.cancel != nil {
 		c.cancel()
-	}
-}
-
-func responseBuilder(c *viper.Viper) runtime.ForwardResponseRewriter {
-	return func(ctx context.Context, response proto.Message) (any, error) {
-		resp := make(map[string]any)
-		if s, ok := response.(*status.Status); ok {
-			if http.StatusText(int(s.Code)) == "" && (s.Code < 0 && s.Code > 17) {
-				resp["code"] = s.Code
-			}
-			resp["message"] = s.Message
-			resp["data"] = nil
-		} else {
-			if _, ok := response.(*emptypb.Empty); ok {
-				resp["data"] = nil
-			} else {
-				resp["data"] = response
-			}
-			resp["message"] = ""
-		}
-		return resp, nil
 	}
 }
