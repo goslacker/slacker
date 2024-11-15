@@ -241,6 +241,24 @@ func (r *Repository[PO, Entity]) Rollback(ctx context.Context) (err error) {
 	return tx.(*gorm.DB).Rollback().Error
 }
 
+func (r *Repository[PO, Entity]) FirstOrCreate(entity *Entity, conditions ...any) (err error) {
+	db, err := Apply(r.DB, conditions...)
+	if err != nil {
+		return
+	}
+	po := new(PO)
+	err = r.E2M(po, entity)
+	if err != nil {
+		return
+	}
+	err = db.FirstOrCreate(po).Error
+	if err != nil {
+		return
+	}
+	err = r.M2E(entity, po)
+	return
+}
+
 func Apply(db *gorm.DB, conditions ...any) (newDB *gorm.DB, err error) {
 	if len(conditions) == 0 {
 		return db, nil
