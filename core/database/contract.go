@@ -4,6 +4,8 @@ import "context"
 
 type Repository[Entity any] interface {
 	WithCtx(context.Context) Repository[Entity]
+	WithLock() Repository[Entity]
+	WithShareLock() Repository[Entity]
 	Create(...*Entity) error
 	Update(entityOrMap any, conditions ...any) error
 	First(conditions ...any) (*Entity, error)

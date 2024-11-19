@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/goslacker/slacker/core/database"
 	"github.com/goslacker/slacker/core/tool/convert"
+	"gorm.io/gorm/clause"
 	"reflect"
 	"strings"
 
@@ -15,6 +16,7 @@ import (
 func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Repository[Entity])) *Repository[PO, Entity] {
 	r := &Repository[PO, Entity]{
 		DB:  db,
+		ctx: context.Background(),
 		M2E: database.DefaultM2E[PO, Entity],
 		E2M: database.DefaultE2M[PO, Entity],
 	}
@@ -52,6 +54,26 @@ func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) database.Repositor
 	return &Repository[PO, Entity]{
 		DB:  r.DB.WithContext(ctx),
 		ctx: ctx,
+		M2E: r.M2E,
+		E2M: r.E2M,
+	}
+}
+
+func (r *Repository[PO, Entity]) WithLock() database.Repository[Entity] {
+	return &Repository[PO, Entity]{
+		DB:  r.DB.Clauses(clause.Locking{Strength: "UPDATE"}),
+		ctx: r.ctx,
+		M2E: r.M2E,
+		E2M: r.E2M,
+	}
+}
+
+func (r *Repository[PO, Entity]) WithShareLock() database.Repository[Entity] {
+	return &Repository[PO, Entity]{
+		DB:  r.DB.Clauses(clause.Locking{Strength: "SHARE"}),
+		ctx: r.ctx,
+		M2E: r.M2E,
+		E2M: r.E2M,
 	}
 }
 
