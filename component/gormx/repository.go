@@ -49,6 +49,8 @@ func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) database.Repositor
 		return &Repository[PO, Entity]{
 			DB:  tx.(*gorm.DB).WithContext(ctx),
 			ctx: ctx,
+			M2E: r.M2E,
+			E2M: r.E2M,
 		}
 	}
 	return &Repository[PO, Entity]{
@@ -273,11 +275,32 @@ func (r *Repository[PO, Entity]) FirstOrCreate(entity *Entity, conditions ...any
 	if err != nil {
 		return
 	}
-	err = db.FirstOrCreate(po).Error
+	if len(conditions) == 0 {
+		err = db.Where(po).FirstOrCreate(po).Error
+	} else {
+		err = db.FirstOrCreate(po).Error
+	}
 	if err != nil {
 		return
 	}
 	err = r.M2E(entity, po)
+	return
+}
+
+func (r *Repository[PO, Entity]) Save(entity *Entity) (err error) {
+	po := new(PO)
+	err = r.E2M(po, entity)
+	if err != nil {
+		return
+	}
+	err = r.DB.Save(po).Error
+	if err != nil {
+		return
+	}
+	err = r.M2E(entity, po)
+	if err != nil {
+		return
+	}
 	return
 }
 

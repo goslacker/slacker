@@ -1,12 +1,11 @@
 package grpcx
 
 import (
-	"fmt"
 	"github.com/goslacker/slacker/component/grpcx/interceptor"
+	"github.com/goslacker/slacker/component/grpcx/resolver"
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"regexp"
 )
 
 // registryCache client用来查询服务
@@ -26,17 +25,7 @@ func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) 
 		)
 	}
 
-	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
-	if !ipReg.MatchString(target) {
-		if conf.Registry != nil && registryCache != nil {
-			target, err = registryCache.Resolve(target)
-			if err != nil {
-				err = fmt.Errorf("resolve service registry failed: %w", err)
-				return
-			}
-		}
-	}
-
+	opts = append(opts, grpc.WithResolvers(&resolver.EtcdResolverBuilder{RegistryCache: &registryCache}))
 	cc, err := grpc.NewClient(target, opts...)
 	if err != nil {
 		return

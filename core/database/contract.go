@@ -20,6 +20,7 @@ type Repository[Entity any] interface {
 	Commit(ctx context.Context) (err error)
 	Rollback(ctx context.Context) (err error)
 	FirstOrCreate(entity *Entity, conditions ...any) (err error)
+	Save(entity *Entity) (err error)
 	SetE2M(f any)
 	SetM2E(f any)
 }

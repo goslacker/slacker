@@ -17,6 +17,9 @@ func StreamThroughClientInterceptor(ctx context.Context, desc *grpc.StreamDesc, 
 func through(ctx context.Context) (newCtx context.Context) {
 	md, _ := metadata.FromIncomingContext(ctx)
 	outmd, _ := metadata.FromOutgoingContext(ctx)
+	if outmd == nil {
+		outmd = make(metadata.MD)
+	}
 
 	throughKeys := []string{"authorization"}
 
