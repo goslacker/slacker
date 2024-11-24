@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/goslacker/slacker/core/database"
 	"github.com/goslacker/slacker/core/tool/convert"
 	"gorm.io/gorm/clause"
-	"reflect"
-	"strings"
 
 	"gorm.io/gorm"
 )
@@ -379,16 +380,31 @@ func applyCondition(db *gorm.DB, conditions ...database.Condition) (newDB *gorm.
 					newDB = newDB.Where(fmt.Sprintf("%s = ?", quote(c[0].(string))), c[1])
 				}
 			case 3:
-				switch c[1] {
+				switch strings.ToLower(c[1].(string)) {
 				case "like":
 					var value string
 					value, err = convert.To[string](c[2])
 					if err != nil {
 						return
 					}
-					newDB = db.Where(fmt.Sprintf("%s LIKE (?)", quote(c[0].(string))), "%"+value+"%")
+					newDB = newDB.Where(fmt.Sprintf("%s LIKE (?)", quote(c[0].(string))), "%"+value+"%")
+				case "not like":
+					var value string
+					value, err = convert.To[string](c[2])
+					if err != nil {
+						return
+					}
+					newDB = newDB.Where(fmt.Sprintf("%s NOT LIKE (?)", quote(c[0].(string))), "%"+value+"%")
 				default:
 					newDB = newDB.Where(fmt.Sprintf("%s %s (?)", quote(c[0].(string)), c[1]), c[2])
+				}
+			case 4:
+				switch strings.ToLower(c[1].(string)) {
+				case "between":
+					newDB = newDB.Where(fmt.Sprintf("%s BETWEEN ? AND ?", quote(c[0].(string))), c[2], c[3])
+				default:
+					err = errors.New("condition params is too many")
+					return
 				}
 			default:
 				err = errors.New("condition params is too many")
