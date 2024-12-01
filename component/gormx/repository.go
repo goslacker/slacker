@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gorm.io/gorm/clause"
 	"reflect"
 	"strings"
 
 	"github.com/goslacker/slacker/core/database"
 	"github.com/goslacker/slacker/core/tool/convert"
-	"gorm.io/gorm/clause"
-
 	"gorm.io/gorm"
 )
 
-func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(database.Repository[Entity])) *Repository[PO, Entity] {
+func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(*Repository[PO, Entity])) *Repository[PO, Entity] {
 	r := &Repository[PO, Entity]{
 		DB:  db,
 		ctx: context.Background(),
@@ -44,7 +43,7 @@ func (r *Repository[PO, Entity]) SetM2E(f any) {
 	r.M2E = f.(func(dst *Entity, src *PO) error)
 }
 
-func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) database.Repository[Entity] {
+func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) *Repository[PO, Entity] {
 	tx := ctx.Value(database.TxKey)
 	if tx != nil {
 		return &Repository[PO, Entity]{
@@ -62,7 +61,7 @@ func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) database.Repositor
 	}
 }
 
-func (r *Repository[PO, Entity]) WithLock() database.Repository[Entity] {
+func (r *Repository[PO, Entity]) WithLock() *Repository[PO, Entity] {
 	return &Repository[PO, Entity]{
 		DB:  r.DB.Clauses(clause.Locking{Strength: "UPDATE"}),
 		ctx: r.ctx,
@@ -71,7 +70,7 @@ func (r *Repository[PO, Entity]) WithLock() database.Repository[Entity] {
 	}
 }
 
-func (r *Repository[PO, Entity]) WithShareLock() database.Repository[Entity] {
+func (r *Repository[PO, Entity]) WithShareLock() *Repository[PO, Entity] {
 	return &Repository[PO, Entity]{
 		DB:  r.DB.Clauses(clause.Locking{Strength: "SHARE"}),
 		ctx: r.ctx,
