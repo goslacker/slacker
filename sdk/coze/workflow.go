@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/goslacker/slacker/core/slicex"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/goslacker/slacker/core/slicex"
 )
 
 func WithParameters(params map[string]any) func(w *workflowReq) {
@@ -34,6 +35,30 @@ type workflowReq struct {
 	Parameters map[string]any    `json:"parameters,omitempty"`
 	BotID      string            `json:"bot_id,omitempty"`
 	Ext        map[string]string `json:"ext,omitempty"`
+}
+
+type workflowResp struct {
+	Code     int    `json:"code"`
+	Cost     string `json:"cost"`
+	Data     string `json:"data"`
+	DebugUrl string `json:"debug_url"`
+	Message  string `json:"message"`
+	Token    int    `json:"token"`
+}
+
+func (c *Client) Workflow(ctx context.Context, workflowID string, opts ...func(w *workflowReq)) (resp workflowResp, err error) {
+	req := &workflowReq{WorkflowID: workflowID}
+	for _, opt := range opts {
+		opt(req)
+	}
+	r := c.makeRequest(http.MethodPost, "/v1/workflow/run", req)
+	r = r.WithContext(ctx)
+	res, err := c.httpClient.Do(r)
+	if err != nil {
+		return
+	}
+	err = res.Scan(&resp)
+	return
 }
 
 func (c *Client) WorkflowStream(ctx context.Context, workflowID string, opts ...func(w *workflowReq)) (msg chan string, err chan error) {

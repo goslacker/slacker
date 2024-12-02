@@ -1,8 +1,9 @@
 package coze
 
 import (
-	"github.com/goslacker/slacker/core/httpx"
 	"net/http"
+
+	"github.com/goslacker/slacker/core/httpx"
 )
 
 const baseUrl httpx.URL = "https://api.coze.cn"
@@ -26,4 +27,11 @@ func (c *Client) makeRequest(method string, uri string, data any) *http.Request 
 	}
 	r.Header.Add("Authorization", "Bearer "+c.token)
 	return r
+}
+
+func (c *Client) Debug() *Client {
+	return &Client{
+		token:      c.token,
+		httpClient: c.httpClient.Debug(),
+	}
 }
