@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/goslacker/slacker/component/grpcx/interceptor"
 	"github.com/goslacker/slacker/core/app"
 	"github.com/goslacker/slacker/core/serviceregistry"
@@ -35,6 +36,12 @@ func WithRegisters(registers ...func(grpc.ServiceRegistrar)) func(*Component) {
 	}
 }
 
+func WithAuthChecker(check func(ctx context.Context, data jwt.MapClaims) error) func(*Component) {
+	return func(m *Component) {
+		m.AuthTool = NewJWTAuth(check)
+	}
+}
+
 func NewComponent(opts ...func(*Component)) *Component {
 	m := &Component{}
 	for _, opt := range opts {
@@ -49,26 +56,27 @@ type Component struct {
 	unaryServerInterceptors  []grpc.UnaryServerInterceptor
 	streamServerInterceptors []grpc.StreamServerInterceptor
 	registers                []func(grpc.ServiceRegistrar)
+	AuthTool                 *JWTAuthTool
 }
 
 func (c *Component) Init() (err error) {
-	auth := interceptor.NewJWTAuth()
 	c.unaryServerInterceptors = []grpc.UnaryServerInterceptor{
 		interceptor.UnaryErrorInterceptor,
-		auth.UnaryAuthInterceptor,
 		interceptor.UnaryValidateInterceptor,
 	}
 
 	c.streamServerInterceptors = []grpc.StreamServerInterceptor{
 		interceptor.StreamErrorInterceptor,
-		auth.StreamAuthInterceptor,
 		interceptor.StreamValidateInterceptor,
 	}
 
-	err = app.Bind[*interceptor.JWTAuth](auth)
-	if err != nil {
-		return
+	if c.AuthTool != nil {
+		err = app.Bind[*JWTAuthTool](c.AuthTool)
+		if err != nil {
+			return
+		}
 	}
+
 	return app.Bind[*Component](c)
 }
 
