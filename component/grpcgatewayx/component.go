@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -188,6 +189,14 @@ func (r *ResponseLogger) Write(body []byte) (int, error) {
 // LogReqAndRespMiddleware 是一个中间件，用于打印请求和响应的日志
 func LogReqAndRespMiddleware(next runtime.HandlerFunc) runtime.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+		ctx := metadata.NewOutgoingContext(
+			r.Context(),
+			metadata.MD{
+				"grpcgateway-test": []string{"test1"},
+			},
+		)
+		r = r.WithContext(ctx)
+
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			panic(err)
