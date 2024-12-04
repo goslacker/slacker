@@ -1,9 +1,11 @@
 package tool
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/goslacker/slacker/core/reflectx"
 	"reflect"
+
+	"github.com/goslacker/slacker/core/reflectx"
 )
 
 func SimpleMap(dst any, src any) (err error) {
@@ -31,6 +33,8 @@ func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	switch dst.Kind() {
 	case reflect.Struct:
 		return StructValueToStruct(dst, src)
+	case reflect.String:
+		return ValueToString(dst, src)
 	default:
 		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
@@ -72,6 +76,8 @@ func SliceValueTo(dst, src reflect.Value) (err error) {
 	switch dst.Kind() {
 	case reflect.Slice:
 		return SliceValueToSlice(dst, src)
+	case reflect.String:
+		return ValueToString(dst, src)
 	default:
 		return fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 	}
@@ -90,5 +96,17 @@ func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
 		}
 		dst.Set(reflect.Append(dst, dstItem.Elem()))
 	}
+	return
+}
+
+func ValueToString(dst reflect.Value, src reflect.Value) (err error) {
+	src = reflectx.Indirect(src, false)
+	dst = reflectx.Indirect(dst, false)
+
+	tmp, err := json.Marshal(src.Interface())
+	if err != nil {
+		return
+	}
+	dst.Set(reflect.ValueOf(string(tmp)))
 	return
 }

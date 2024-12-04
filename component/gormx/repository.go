@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gorm.io/gorm/clause"
 	"reflect"
 	"strings"
+
+	"gorm.io/gorm/clause"
 
 	"github.com/goslacker/slacker/core/database"
 	"github.com/goslacker/slacker/core/tool/convert"
