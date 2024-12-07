@@ -2,7 +2,6 @@ package eventbus
 
 import (
 	"reflect"
-	"sync"
 )
 
 type ListenerFunc[T any] func(event T)
@@ -24,13 +23,13 @@ func Fire[T any](event T) {
 	if !ok {
 		return
 	}
-	var wg sync.WaitGroup
-	wg.Add(len(listeners))
-	for _, listener := range listeners {
-		go func() {
-			defer wg.Done()
+	ch := make(chan struct{})
+	go func() {
+		defer func() { ch <- struct{}{} }()
+		for _, listener := range listeners {
 			listener.Call([]reflect.Value{reflect.ValueOf(event)})
-		}()
-	}
-	wg.Wait()
+		}
+	}()
+	<-ch
+	close(ch)
 }

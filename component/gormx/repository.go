@@ -137,6 +137,17 @@ func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err
 	return
 }
 
+func (r *Repository[PO, Entity]) Count(conditions ...any) (count int64, err error) {
+	db, err := Apply(r.DB, conditions...)
+	if err != nil {
+		return
+	}
+
+	err = db.Model(new(PO)).Count(&count).Error
+
+	return
+}
+
 func (r *Repository[PO, Entity]) First(conditions ...any) (entity *Entity, err error) {
 	db, err := Apply(r.DB, conditions...)
 	if err != nil {

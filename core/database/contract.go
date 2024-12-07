@@ -8,6 +8,7 @@ type Repository[Entity any] interface {
 	First(conditions ...any) (*Entity, error)
 	List(conditions ...any) ([]*Entity, error)
 	Delete(conditions ...any) error
+	Count(conditions ...any) (int64, error)
 	// PaginationByOffset 通过偏移分页查询
 	PaginationByOffset(offset int, limit int, conditions ...any) (total int64, list []*Entity, err error)
 	// Pagination 通过页数分页查询
