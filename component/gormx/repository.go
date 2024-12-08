@@ -36,12 +36,12 @@ type Repository[PO any, Entity any] struct {
 	E2M func(dst *PO, src *Entity) error
 }
 
-func (r *Repository[PO, Entity]) SetE2M(f any) {
-	r.E2M = f.(func(dst *PO, src *Entity) error)
+func (r *Repository[PO, Entity]) SetE2M(f func(dst *PO, src *Entity) error) {
+	r.E2M = f
 }
 
-func (r *Repository[PO, Entity]) SetM2E(f any) {
-	r.M2E = f.(func(dst *Entity, src *PO) error)
+func (r *Repository[PO, Entity]) SetM2E(f func(dst *Entity, src *PO) error) {
+	r.M2E = f
 }
 
 func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) *Repository[PO, Entity] {
@@ -314,6 +314,31 @@ func (r *Repository[PO, Entity]) Save(entity *Entity) (err error) {
 		return
 	}
 	return
+}
+
+func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context, batch int, list []*Entity) error, conditions ...any) (err error) {
+	var lst []*PO
+	list := make([]*Entity, batchSize)
+	db, err := Apply(r.DB, conditions...)
+	if err != nil {
+		return
+	}
+	return db.FindInBatches(&lst, batchSize, func(tx *gorm.DB, batch int) (err error) {
+		for idx, item := range lst {
+			var tmp Entity
+			err = r.M2E(&tmp, item)
+			if err != nil {
+				return
+			}
+			list[idx] = &tmp
+		}
+		ctx := r.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx = context.WithValue(ctx, database.TxKey, tx)
+		return f(ctx, batch, list[:len(lst)])
+	}).Error
 }
 
 func Apply(db *gorm.DB, conditions ...any) (newDB *gorm.DB, err error) {

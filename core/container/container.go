@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 )
 
 var ErrNotFound = fmt.Errorf("not found")
@@ -49,8 +50,9 @@ func NewContainer() *Container {
 }
 
 type Container struct {
-	providers map[reflect.Type]map[string]*provider
-	instances map[reflect.Type]map[string]reflect.Value
+	providers     map[reflect.Type]map[string]*provider
+	instances     map[reflect.Type]map[string]reflect.Value
+	instancesLock sync.Mutex
 }
 
 func (c *Container) Bind(t reflect.Type, value reflect.Value, opts ...func(*BindOpts)) (err error) {
@@ -61,7 +63,9 @@ func (c *Container) Bind(t reflect.Type, value reflect.Value, opts ...func(*Bind
 		opt(options)
 	}
 
+	c.instancesLock.Lock()
 	delete(c.instances, t)
+	c.instancesLock.Unlock()
 	if canBindConsistent(t, value) {
 		err = c.bindInstance(t, value, options)
 	} else if canBindProvider(t, value) {
@@ -79,11 +83,13 @@ func (c *Container) bindInstance(t reflect.Type, value reflect.Value, options *B
 		value = value.Convert(t)
 	}
 
+	c.instancesLock.Lock()
 	group, ok := c.instances[t]
 	if !ok {
 		group = make(map[string]reflect.Value)
 		c.instances[t] = group
 	}
+	c.instancesLock.Unlock()
 	group[options.Key] = value
 
 	return
@@ -209,10 +215,12 @@ func (c *Container) resolve(ctx context.Context, t reflect.Type, key string) (re
 				}
 				ret = rets[0]
 				if value.Singleton {
+					c.instancesLock.Lock()
 					if c.instances[t] == nil {
 						c.instances[t] = make(map[string]reflect.Value)
 					}
 					c.instances[t][key] = ret
+					c.instancesLock.Unlock()
 				}
 				return
 			}
@@ -229,10 +237,12 @@ func (c *Container) resolve(ctx context.Context, t reflect.Type, key string) (re
 					}
 					ret = rets[0].Convert(t)
 					if prvd.Singleton {
+						c.instancesLock.Lock()
 						if c.instances[t] == nil {
 							c.instances[t] = make(map[string]reflect.Value)
 						}
 						c.instances[t][key] = ret
+						c.instancesLock.Unlock()
 					}
 					return
 				}

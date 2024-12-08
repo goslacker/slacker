@@ -19,8 +19,7 @@ type Repository[Entity any] interface {
 	Rollback(ctx context.Context) (err error)
 	FirstOrCreate(entity *Entity, conditions ...any) (err error)
 	Save(entity *Entity) (err error)
-	SetE2M(f any)
-	SetM2E(f any)
+	Batch(batchSize int, f func(ctx context.Context, batch int, list []*Entity) error, conditions ...any) (err error)
 }
 
 type Order []string
