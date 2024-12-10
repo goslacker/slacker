@@ -32,7 +32,7 @@ func (c *Component) Init() (err error) {
 		"log_level":                     4,
 		"ignore_record_not_found_error": true,
 		"colorful":                      true,
-		"parameterized_queries":         true,
+		"parameterized_queries":         false,
 	}
 
 	// 检查是否有缺失配置

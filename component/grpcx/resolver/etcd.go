@@ -35,7 +35,7 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 
 	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
 	if !ipReg.MatchString(target) {
-		if conf.Registry != nil && r.registryCache != nil {
+		if conf.Registry != nil && *r.registryCache != nil {
 			target, err = (*r.registryCache).Resolve(target)
 			if err != nil {
 				r.cc.ReportError(fmt.Errorf("resolve service registry failed: %w", err))

@@ -49,8 +49,8 @@ func newErr(opt ...func(*Error)) *Error {
 	}
 
 	stack := make([]byte, 4096)
-	runtime.Stack(stack, false)
-	e.Detail["stack"] = string(stack)
+	n := runtime.Stack(stack, false)
+	e.Detail["stack"] = string(stack[:n])
 
 	return e
 }
