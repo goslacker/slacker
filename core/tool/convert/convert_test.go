@@ -1906,4 +1906,77 @@ func TestToKind(t *testing.T) {
 			require.Equal(t, "", r.Interface())
 		}
 	}
+	{
+		a := "01"
+		{
+			r, err := ToKind(a, reflect.Bool)
+			require.NoError(t, err)
+			require.Equal(t, true, r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Int)
+			require.NoError(t, err)
+			require.Equal(t, 1, r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Int8)
+			require.NoError(t, err)
+			require.Equal(t, int8(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Int16)
+			require.NoError(t, err)
+			require.Equal(t, int16(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Int32)
+			require.NoError(t, err)
+			require.Equal(t, int32(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Int64)
+			require.NoError(t, err)
+			require.Equal(t, int64(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Uint)
+			require.NoError(t, err)
+			require.Equal(t, uint(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Uint8)
+			require.NoError(t, err)
+			require.Equal(t, uint8(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Uint16)
+			require.NoError(t, err)
+			require.Equal(t, uint16(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Uint32)
+			require.NoError(t, err)
+			require.Equal(t, uint32(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Uint64)
+			require.NoError(t, err)
+			require.Equal(t, uint64(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Float32)
+			require.NoError(t, err)
+			require.Equal(t, float32(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.Float64)
+			require.NoError(t, err)
+			require.Equal(t, float64(1), r.Interface())
+		}
+		{
+			r, err := ToKind(a, reflect.String)
+			require.NoError(t, err)
+			require.Equal(t, "01", r.Interface())
+		}
+	}
 }
