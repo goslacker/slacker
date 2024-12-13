@@ -1,11 +1,10 @@
 package grpcgatewayx
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
+	"github.com/goslacker/slacker/component/grpcgatewayx/annotator"
+	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -21,7 +20,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -132,7 +130,16 @@ func (c *Component) Start() {
 	if c.errorHandler != nil {
 		options = append(options, runtime.WithErrorHandler(c.errorHandler))
 	}
-	options = append(options, runtime.WithMiddlewares(LogReqAndRespMiddleware))
+
+	authMiddleware := middleware.NewJwtAuthMiddlewareBuilder()
+	err = app.Bind[*middleware.JwtAuthMiddlewareBuilder](func() *middleware.JwtAuthMiddlewareBuilder {
+		return authMiddleware
+	})
+	if err != nil {
+		return
+	}
+	options = append(options, runtime.WithMiddlewares(middleware.LogReqAndRespMiddleware, authMiddleware.Build))
+	options = append(options, runtime.WithMetadata(annotator.PassAuthResult))
 	mux := runtime.NewServeMux(options...)
 	for _, register := range c.registers {
 		err := register(ctx, mux, conn)
@@ -167,82 +174,5 @@ func (c *Component) Stop() {
 	c.gwServer.Shutdown(ctx)
 	if c.cancel != nil {
 		c.cancel()
-	}
-}
-
-type ResponseLogger struct {
-	http.ResponseWriter
-	StatusCode int
-	Body       []byte
-}
-
-func (r *ResponseLogger) WriteHeader(statusCode int) {
-	r.StatusCode = statusCode
-	r.ResponseWriter.WriteHeader(statusCode)
-}
-
-func (r *ResponseLogger) Write(body []byte) (int, error) {
-	r.Body = body
-	return r.ResponseWriter.Write(body)
-}
-
-// LogReqAndRespMiddleware 是一个中间件，用于打印请求和响应的日志
-func LogReqAndRespMiddleware(next runtime.HandlerFunc) runtime.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-		ctx := metadata.NewOutgoingContext(
-			r.Context(),
-			metadata.MD{
-				"grpcgateway-test": []string{"test1"},
-			},
-		)
-		r = r.WithContext(ctx)
-
-		reqBody, err := io.ReadAll(r.Body)
-		if err != nil {
-			panic(err)
-		}
-		r.Body = io.NopCloser(bytes.NewReader(reqBody))
-
-		w = &ResponseLogger{ResponseWriter: w}
-
-		// 调用下一个处理函数
-		next(w, r, pathParams)
-
-		rMap := map[string]any{
-			"method": r.Method,
-			"url":    r.URL.String(),
-			"header": r.Header,
-		}
-		{
-			var b map[string]any
-			err = json.Unmarshal(reqBody, &b)
-			if err != nil {
-				rMap["body"] = string(reqBody)
-			} else {
-				rMap["body"] = b
-			}
-		}
-
-		respMap := map[string]any{
-			"status": w.(*ResponseLogger).StatusCode,
-			"header": w.Header(),
-		}
-		{
-			var b map[string]any
-			err = json.Unmarshal(w.(*ResponseLogger).Body, &b)
-			if err != nil {
-				respMap["body"] = string(w.(*ResponseLogger).Body)
-			} else {
-				respMap["body"] = b
-			}
-		}
-
-		slog.Debug(
-			"request log",
-			"req",
-			rMap,
-			"resp",
-			respMap,
-		)
 	}
 }

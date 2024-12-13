@@ -1,9 +1,11 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/goslacker/slacker/core/jwtx"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"log/slog"
 	"net/http"
 )
 
@@ -41,16 +43,16 @@ func (j *JwtAuthMiddlewareBuilder) SetUserIdentifier(f func(claims jwt.MapClaims
 	return j
 }
 
-func (j *JwtAuthMiddlewareBuilder) Build() func(*gin.Context) (bool, int, error) {
-	return func(c *gin.Context) (abort bool, status int, err error) {
-		claims, err := jwtx.AuthToken(c.Request, j.header, j.query, j.salt, j.check)
+func (j *JwtAuthMiddlewareBuilder) Build(next runtime.HandlerFunc) runtime.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+		claims, err := jwtx.AuthToken(r, j.header, j.query, j.salt, j.check)
 		if err != nil {
-			abort = true
-			status = http.StatusUnauthorized
-			return
+			slog.Debug("parse auth token failed", "error", err)
+			//w.WriteHeader(http.StatusUnauthorized)
+			//return
+		} else {
+			r = r.WithContext(context.WithValue(r.Context(), "claims", claims))
 		}
-		c.Set("claims", claims)
-
-		return
+		next(w, r, pathParams)
 	}
 }
