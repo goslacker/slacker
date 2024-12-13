@@ -8,6 +8,10 @@ import (
 	"net/http"
 )
 
+const (
+	ClaimsKey = "x-claims"
+)
+
 func PassAuthResult(_ context.Context, req *http.Request) metadata.MD {
 	c := req.Context().Value("claims")
 	if c != nil {
@@ -16,7 +20,7 @@ func PassAuthResult(_ context.Context, req *http.Request) metadata.MD {
 			slog.Warn("failed to marshal claims", "error", err)
 			return nil
 		}
-		return metadata.Pairs("claims", string(b))
+		return metadata.Pairs(ClaimsKey, string(b))
 	}
 	return nil
 }

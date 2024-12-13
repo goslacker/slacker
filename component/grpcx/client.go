@@ -11,6 +11,21 @@ import (
 // registryCache client用来查询服务
 var registryCache registry.ServiceRegistry
 
+var unaryClientInterceptors = []grpc.UnaryClientInterceptor{
+	interceptor.UnaryTraceClientInterceptor,
+}
+var streamClientInterceptors = []grpc.StreamClientInterceptor{
+	interceptor.StreamTraceClientInterceptor,
+}
+
+func RegisterUnaryClientInterceptors(interceptors ...grpc.UnaryClientInterceptor) {
+	unaryClientInterceptors = append(unaryClientInterceptors, interceptors...)
+}
+
+func RegisterStreamClientInterceptors(interceptors ...grpc.StreamClientInterceptor) {
+	streamClientInterceptors = append(streamClientInterceptors, interceptors...)
+}
+
 func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) T, opts ...grpc.DialOption) (result T, err error) {
 	var conf Config
 	err = viper.Sub("grpcx").Unmarshal(&conf)
@@ -20,8 +35,8 @@ func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) 
 
 	if conf.Trace != nil {
 		opts = append(opts,
-			grpc.WithChainUnaryInterceptor(interceptor.UnaryTraceClientInterceptor),
-			grpc.WithChainStreamInterceptor(interceptor.StreamTraceClientInterceptor),
+			grpc.WithChainUnaryInterceptor(unaryClientInterceptors...),
+			grpc.WithChainStreamInterceptor(streamClientInterceptors...),
 		)
 	}
 
