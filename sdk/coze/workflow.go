@@ -37,7 +37,7 @@ type workflowReq struct {
 	Ext        map[string]string `json:"ext,omitempty"`
 }
 
-type workflowResp struct {
+type WorkflowResp struct {
 	Code     int    `json:"code"`
 	Cost     string `json:"cost"`
 	Data     string `json:"data"`
@@ -46,7 +46,7 @@ type workflowResp struct {
 	Token    int    `json:"token"`
 }
 
-func (c *Client) Workflow(ctx context.Context, workflowID string, opts ...func(w *workflowReq)) (resp workflowResp, err error) {
+func (c *Client) Workflow(ctx context.Context, workflowID string, opts ...func(w *workflowReq)) (resp WorkflowResp, err error) {
 	req := &workflowReq{WorkflowID: workflowID}
 	for _, opt := range opts {
 		opt(req)
