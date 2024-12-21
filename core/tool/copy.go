@@ -22,10 +22,29 @@ func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
 		return StructValueTo(dst, src)
 	case reflect.Slice:
 		return SliceValueTo(dst, src)
+	case reflect.String:
+		return StringValueTo(dst, src)
 	default:
 		reflectx.SetValue(dst, src)
 		return
 	}
+}
+
+func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
+	dst = reflectx.Indirect(dst, true)
+	switch dst.Kind() {
+	case reflect.Slice:
+		if _, ok := dst.Interface().([]byte); ok {
+			dst.SetBytes([]byte(src.String()))
+		} else {
+			json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+		}
+	case reflect.Struct:
+		json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+	default:
+		reflectx.SetValue(dst, src)
+	}
+	return
 }
 
 func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
