@@ -44,6 +44,11 @@ type WorkflowResp struct {
 	DebugUrl string `json:"debug_url"`
 	Message  string `json:"message"`
 	Token    int    `json:"token"`
+	Raw      []byte `json:"-"`
+}
+
+func (w *WorkflowResp) SetRaw(raw []byte) {
+	w.Raw = raw
 }
 
 func (c *Client) Workflow(ctx context.Context, workflowID string, opts ...func(w *workflowReq)) (resp WorkflowResp, err error) {

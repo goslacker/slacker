@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/goslacker/slacker/core/tool"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/goslacker/slacker/core/tool"
 )
 
 type Response struct {
@@ -22,6 +23,9 @@ func (r *Response) Scan(v any, unmarshal ...func(data []byte, v any) error) (err
 	content, err := io.ReadAll(r.Body)
 	if err != nil {
 		return
+	}
+	if x, ok := v.(interface{ SetRaw([]byte) }); ok {
+		x.SetRaw(content)
 	}
 	if len(unmarshal) > 0 {
 		return unmarshal[0](content, v)
