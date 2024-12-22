@@ -42,7 +42,7 @@ type WorkflowResp struct {
 	Cost     string `json:"cost"`
 	Data     string `json:"data"`
 	DebugUrl string `json:"debug_url"`
-	Message  string `json:"message"`
+	Message  string `json:"msg"`
 	Token    int    `json:"token"`
 	Raw      []byte `json:"-"`
 }
