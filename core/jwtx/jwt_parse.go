@@ -1,10 +1,11 @@
 package jwtx
 
 import (
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/goslacker/slacker/core/errx"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/goslacker/slacker/core/errx"
 )
 
 func AuthToken(request *http.Request, headerKey string, queryKey string, salt string, check func(claims jwt.MapClaims) error) (claims jwt.MapClaims, err error) {

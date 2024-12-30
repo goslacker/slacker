@@ -2,12 +2,36 @@ package zhipu
 
 import (
 	"encoding/json"
-	"github.com/goslacker/slacker/sdk/ai/client"
 	"log/slog"
 	"testing"
 
+	"github.com/goslacker/slacker/sdk/ai/client"
+
 	"github.com/stretchr/testify/require"
 )
+
+func TestClient(t *testing.T) {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
+	c := NewClient("21a1a6307d4c939d395b6342e44722e5.W3juxuDfWTMrVzx0")
+	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
+		Model:          "glm-4-plus",
+		ResponseFormat: map[string]string{"type": "json_object"},
+		Messages: []client.Message{
+			{
+				Role:    "system",
+				Content: "您应该始终遵循指令并输出一个有效的JSON对象。请根据指令使用指定的JSON对象结构。如果不确定，请默认使用 {\"answer\": \"$your_answer\"}。确保始终不以 \"```\" 结束代码块。",
+			},
+			{
+				Role:    "user",
+				Content: "你好",
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	b, _ := json.Marshal(resp)
+	println(string(b))
+}
 
 var productList = `[
   {
