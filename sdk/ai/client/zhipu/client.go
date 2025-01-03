@@ -11,6 +11,7 @@ import (
 
 func init() {
 	client.Register("glm-4-0520", NewClient)
+	client.Register("glm-4-plus", NewClient)
 	client.Register("glm-4v", NewClient)
 	client.Register("glm-4v-plus", NewClient)
 }
