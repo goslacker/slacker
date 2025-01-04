@@ -24,8 +24,21 @@ func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
 		return SliceValueTo(dst, src)
 	case reflect.String:
 		return StringValueTo(dst, src)
+	case reflect.Map:
+		return MapValueTo(dst, src)
 	default:
 		reflectx.SetValue(dst, src)
+		return
+	}
+}
+
+func MapValueTo(dst reflect.Value, src reflect.Value) (err error) {
+	dst = reflectx.Indirect(dst, true)
+	switch dst.Kind() {
+	case reflect.String:
+		return ValueToString(dst, src)
+	default:
+		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
 	}
 }
@@ -39,7 +52,7 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 		} else {
 			json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
 		}
-	case reflect.Struct:
+	case reflect.Struct, reflect.Map:
 		json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
 	default:
 		reflectx.SetValue(dst, src)
