@@ -3,8 +3,9 @@ package ruleengine
 import (
 	"context"
 	"errors"
-	"github.com/goslacker/slacker/core/slicex"
 	"sync"
+
+	"github.com/goslacker/slacker/core/slicex"
 )
 
 type chainKey string
@@ -120,7 +121,7 @@ func (c *Chain) readyToRun(nextID string) bool {
 		if len(tmp) <= 0 {
 			return true
 		} else {
-			c.addToWaits(nextID, slicex.Map(tmp, func(edge Edge) string {
+			c.addToWaits(nextID, slicex.MustMap(tmp, func(edge Edge) string {
 				return edge.GetSource()
 			})...)
 			return false
@@ -184,7 +185,7 @@ func (c *Chain) Run(ctx context.Context) {
 
 func (c *Chain) first() Node {
 	first, ok := slicex.Find(c.nodes, func(node Node) bool {
-		return !slicex.Contains(node.GetID(), slicex.Map(c.edges, func(edge Edge) string {
+		return !slicex.Contains(node.GetID(), slicex.MustMap(c.edges, func(edge Edge) string {
 			return edge.GetTarget()
 		}))
 	})

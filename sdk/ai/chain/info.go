@@ -29,7 +29,7 @@ type NodeInfo struct {
 }
 
 func (n *NodeInfo) VariableNames() []string {
-	return slicex.Map(n.Variables, func(item Variable) string {
+	return slicex.MustMap(n.Variables, func(item Variable) string {
 		return item.Name
 	})
 }

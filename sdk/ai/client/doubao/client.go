@@ -3,11 +3,12 @@ package doubao
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strings"
+
 	httpClient "github.com/goslacker/slacker/core/httpx/client"
 	"github.com/goslacker/slacker/core/slicex"
 	"github.com/goslacker/slacker/sdk/ai/client"
-	"net/http"
-	"strings"
 
 	"github.com/volcengine/volcengine-go-sdk/service/arkruntime"
 	"github.com/volcengine/volcengine-go-sdk/service/arkruntime/model"
@@ -45,7 +46,7 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 
 	request := model.ChatCompletionRequest{
 		Model: c.model,
-		Messages: slicex.Map(req.Messages, func(message client.Message) *model.ChatCompletionMessage {
+		Messages: slicex.MustMap(req.Messages, func(message client.Message) *model.ChatCompletionMessage {
 			msg := &model.ChatCompletionMessage{
 				ToolCallID: message.ToolCallID,
 				Content: &model.ChatCompletionMessageContent{
@@ -62,7 +63,7 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 			}
 			return msg
 		}),
-		Tools: slicex.Map(req.Tools, func(tool client.Tool) *model.Tool {
+		Tools: slicex.MustMap(req.Tools, func(tool client.Tool) *model.Tool {
 			t := &model.Tool{
 				Type: model.ToolTypeFunction,
 				Function: &model.FunctionDefinition{
@@ -90,14 +91,14 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 	}
 
 	resp = &client.ChatCompletionResp{
-		Choices: slicex.Map(response.Choices, func(choice *model.ChatCompletionChoice) client.Choice {
+		Choices: slicex.MustMap(response.Choices, func(choice *model.ChatCompletionChoice) client.Choice {
 			return client.Choice{
 				FinishReason: string(choice.FinishReason),
 				Index:        int(choice.Index),
 				Message: client.Message{
 					Content: *choice.Message.Content.StringValue,
 					Role:    choice.Message.Role,
-					ToolCalls: slicex.Map(choice.Message.ToolCalls, func(toolCall *model.ToolCall) client.ToolCall {
+					ToolCalls: slicex.MustMap(choice.Message.ToolCalls, func(toolCall *model.ToolCall) client.ToolCall {
 						call := client.ToolCall{
 							ID:   toolCall.ID,
 							Type: client.ToolType(toolCall.Type),

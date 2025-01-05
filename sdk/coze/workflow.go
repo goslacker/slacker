@@ -140,7 +140,7 @@ func isComplete(fragments []*fragment) (msg string, ok bool) {
 		if f.NodeIsFinish {
 			expectCount, _ := strconv.Atoi(f.NodeSeqId)
 			if len(fragments)-1 == expectCount {
-				msg = strings.Join(slicex.Map(fragments, func(item *fragment) string {
+				msg = strings.Join(slicex.MustMap(fragments, func(item *fragment) string {
 					return item.Content
 				}), "")
 				ok = true

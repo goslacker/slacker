@@ -3,14 +3,15 @@ package ginx
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"net/http"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/goslacker/slacker/component/ginx/middleware"
 	"github.com/goslacker/slacker/core/app"
 	"github.com/goslacker/slacker/core/slicex"
 	"github.com/spf13/viper"
-	"log/slog"
-	"net/http"
-	"time"
 )
 
 func NewGinx() *Ginx {
@@ -128,7 +129,7 @@ func (g *Ginx) Match(strings []string, s string, a ...any) Router {
 
 func (g *Ginx) Group(s string, a ...any) Router {
 	return &Ginx{
-		router: g.router.Group(s, slicex.Map(a, func(item any) gin.HandlerFunc {
+		router: g.router.Group(s, slicex.MustMap(a, func(item any) gin.HandlerFunc {
 			return WrapMiddleware(item)
 		})...),
 	}
@@ -156,7 +157,7 @@ func (g *Ginx) StaticFS(s string, system http.FileSystem) Router {
 
 func convertHandlers(a []any) []gin.HandlerFunc {
 	handlers := make([]gin.HandlerFunc, 0, len(a))
-	handlers = append(handlers, slicex.Map(a[:len(a)-1], func(item any) gin.HandlerFunc {
+	handlers = append(handlers, slicex.MustMap(a[:len(a)-1], func(item any) gin.HandlerFunc {
 		return WrapMiddleware(item)
 	})...)
 	handlers = append(handlers, WrapEndpoint(a[len(a)-1]))

@@ -2,9 +2,10 @@ package slicex
 
 import (
 	"errors"
-	"github.com/goslacker/slacker/core/reflectx"
 	"reflect"
 	"strings"
+
+	"github.com/goslacker/slacker/core/reflectx"
 )
 
 func Find[T any](s []T, f func(item T) bool) (T, bool) {
@@ -93,8 +94,20 @@ func SameItem[T comparable](s ...T) bool {
 	return true
 }
 
-// Map maps the slice to a new slice by applying the function to each element.
-func Map[T any, R any](s []T, f func(item T) R) []R {
+func Map[T any, R any](s []T, f func(item T) (R, error)) ([]R, error) {
+	ret := make([]R, 0, len(s))
+	for _, item := range s {
+		tmp, err := f(item)
+		if err != nil {
+			return nil, err
+		}
+		ret = append(ret, tmp)
+	}
+	return ret, nil
+}
+
+// MustMap maps the slice to a new slice by applying the function to each element.
+func MustMap[T any, R any](s []T, f func(item T) R) []R {
 	ret := make([]R, 0, len(s))
 	for _, item := range s {
 		ret = append(ret, f(item))

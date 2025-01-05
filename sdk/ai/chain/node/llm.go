@@ -3,10 +3,11 @@ package node
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+
 	"github.com/goslacker/slacker/core/slicex"
 	"github.com/goslacker/slacker/sdk/ai/chain"
 	"github.com/goslacker/slacker/sdk/ai/client"
-	"log/slog"
 )
 
 func WithEnableHistory() func(*LLM) {
@@ -159,7 +160,7 @@ func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
 	req := &client.ChatCompletionReq{
 		Model:       l.Model,
 		Temperature: l.Temperature,
-		Tools: slicex.Map(l.Tools, func(tool LLMTool) client.Tool {
+		Tools: slicex.MustMap(l.Tools, func(tool LLMTool) client.Tool {
 			return client.Tool{
 				Type: client.ToolTypeFunction,
 				Function: &client.Function{
@@ -227,7 +228,7 @@ func (l *LLM) Run(ctx chain.Context) (nextID string, err error) {
 		req = &client.ChatCompletionReq{
 			Model:       l.Model,
 			Temperature: l.Temperature,
-			Tools: slicex.Map(l.Tools, func(tool LLMTool) client.Tool {
+			Tools: slicex.MustMap(l.Tools, func(tool LLMTool) client.Tool {
 				return client.Tool{
 					Type: client.ToolTypeFunction,
 					Function: &client.Function{

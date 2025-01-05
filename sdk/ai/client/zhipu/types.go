@@ -12,7 +12,7 @@ import (
 func FromStdChatCompletionReq(req *client.ChatCompletionReq) *GLM4ChatCompletionReq {
 	request := &GLM4ChatCompletionReq{
 		Model: req.Model,
-		Messages: slicex.Map(req.Messages, func(item client.Message) Message {
+		Messages: slicex.MustMap(req.Messages, func(item client.Message) Message {
 			m := Message{
 				Role:       item.Role,
 				ToolCallID: item.ToolCallID,
@@ -21,7 +21,7 @@ func FromStdChatCompletionReq(req *client.ChatCompletionReq) *GLM4ChatCompletion
 			case string:
 				m.Content = x
 			case []client.Content:
-				m.Content = slicex.Map(x, func(item client.Content) Content {
+				m.Content = slicex.MustMap(x, func(item client.Content) Content {
 					c := Content{
 						Text: item.Text,
 						Type: item.Type,
@@ -34,7 +34,7 @@ func FromStdChatCompletionReq(req *client.ChatCompletionReq) *GLM4ChatCompletion
 					return c
 				})
 			case []*client.Content:
-				m.Content = slicex.Map(x, func(item *client.Content) Content {
+				m.Content = slicex.MustMap(x, func(item *client.Content) Content {
 					c := Content{
 						Text: item.Text,
 						Type: item.Type,
@@ -53,7 +53,7 @@ func FromStdChatCompletionReq(req *client.ChatCompletionReq) *GLM4ChatCompletion
 		}),
 		MaxTokens: req.MaxTokens,
 		Stop:      req.Stop,
-		Tools: slicex.Map(req.Tools, func(item client.Tool) Tool {
+		Tools: slicex.MustMap(req.Tools, func(item client.Tool) Tool {
 			t := Tool{
 				Type: string(item.Type),
 			}
@@ -182,12 +182,12 @@ type GLM4ChatCompletionResp struct {
 func (r *GLM4ChatCompletionResp) IntoStdChatCompletionResp() *client.ChatCompletionResp {
 	return &client.ChatCompletionResp{
 		ID: r.ID,
-		Choices: slicex.Map(r.Choices, func(item Choice) client.Choice {
+		Choices: slicex.MustMap(r.Choices, func(item Choice) client.Choice {
 			return client.Choice{
 				Message: client.Message{
 					Role:    item.Message.Role,
 					Content: tool.Ternary(item.Message.Content == "", nil, item.Message.Content),
-					ToolCalls: slicex.Map(item.Message.ToolCalls, func(item ToolCall) client.ToolCall {
+					ToolCalls: slicex.MustMap(item.Message.ToolCalls, func(item ToolCall) client.ToolCall {
 						return client.ToolCall{
 							ID:   item.ID,
 							Type: client.ToolType(item.Type),
@@ -209,7 +209,7 @@ func (r *GLM4ChatCompletionResp) IntoStdChatCompletionResp() *client.ChatComplet
 			PromptTokens:     r.Usage.PromptTokens,
 			TotalTokens:      r.Usage.TotalTokens,
 		},
-		WebSearch: slicex.Map(r.WebSearch, func(item WebSearchResp) client.WebSearchResp {
+		WebSearch: slicex.MustMap(r.WebSearch, func(item WebSearchResp) client.WebSearchResp {
 			return client.WebSearchResp{
 				Title:   item.Title,
 				Link:    item.Link,
