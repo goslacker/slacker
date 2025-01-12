@@ -135,3 +135,24 @@ func ToMap[T any, K comparable, V any](s []T, f func(item T) (key K, value V)) m
 
 	return m
 }
+
+func Index[S ~[]E, E comparable](s S, v ...E) int {
+	if len(v) == 0 || len(s) == 0 || len(v) > len(s) {
+		return -1
+	}
+
+	for idx := range s {
+		if s[idx] == v[0] {
+			same := true
+			for i := range v {
+				if v[i] != s[idx+i] {
+					same = false
+				}
+			}
+			if same {
+				return idx
+			}
+		}
+	}
+	return -1
+}
