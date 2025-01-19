@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -144,8 +145,8 @@ func (c *Client) Clean() {
 	c.headers = make(http.Header)
 }
 
-func (c *Client) makeRequest(method string, url string, body any) (req *Request, err error) {
-	return NewRequest(method, url, body, c.cookies, c.headers)
+func (c *Client) makeRequest(ctx context.Context, method string, url string, body any) (req *Request, err error) {
+	return NewRequest(ctx, method, url, body, c.cookies, c.headers)
 }
 
 func (c *Client) Do(request *Request) (resp *Response, err error) {
@@ -177,16 +178,24 @@ func (c *Client) buildUrl(uri string) (u string, err error) {
 }
 
 func (c *Client) PostJson(uri string, body any) (resp *Response, err error) {
-	return c.SetHeader("Content-Type", "application/json").Post(uri, body)
+	return c.PostJsonWithCtx(context.Background(), uri, body)
+}
+
+func (c *Client) PostJsonWithCtx(ctx context.Context, uri string, body any) (resp *Response, err error) {
+	return c.SetHeader("Content-Type", "application/json").PostWithCtx(ctx, uri, body)
 }
 
 func (c *Client) Post(uri string, body any) (resp *Response, err error) {
+	return c.PostWithCtx(context.Background(), uri, body)
+}
+
+func (c *Client) PostWithCtx(ctx context.Context, uri string, body any) (resp *Response, err error) {
 	u, err := c.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(http.MethodPost, u, body)
+	req, err := c.makeRequest(ctx, http.MethodPost, u, body)
 	if err != nil {
 		return
 	}
@@ -205,16 +214,24 @@ func (c *Client) Post(uri string, body any) (resp *Response, err error) {
 }
 
 func (c *Client) PutJson(uri string, body any) (resp *Response, err error) {
-	return c.SetHeader("Content-Type", "application/json").Put(uri, body)
+	return c.PutJsonWithCtx(context.Background(), uri, body)
+}
+
+func (c *Client) PutJsonWithCtx(ctx context.Context, uri string, body any) (resp *Response, err error) {
+	return c.SetHeader("Content-Type", "application/json").PutWithCtx(ctx, uri, body)
 }
 
 func (c *Client) Put(uri string, body any) (resp *Response, err error) {
+	return c.PutWithCtx(context.Background(), uri, body)
+}
+
+func (c *Client) PutWithCtx(ctx context.Context, uri string, body any) (resp *Response, err error) {
 	u, err := c.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(http.MethodPut, u, body)
+	req, err := c.makeRequest(ctx, http.MethodPut, u, body)
 	if err != nil {
 		return
 	}
@@ -233,12 +250,16 @@ func (c *Client) Put(uri string, body any) (resp *Response, err error) {
 }
 
 func (c *Client) Delete(uri string) (resp *Response, err error) {
+	return c.DeleteWithCtx(context.Background(), uri)
+}
+
+func (c *Client) DeleteWithCtx(ctx context.Context, uri string) (resp *Response, err error) {
 	u, err := c.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(http.MethodDelete, u, nil)
+	req, err := c.makeRequest(ctx, http.MethodDelete, u, nil)
 	if err != nil {
 		return
 	}
@@ -257,12 +278,16 @@ func (c *Client) Delete(uri string) (resp *Response, err error) {
 }
 
 func (c *Client) Get(uri string) (resp *Response, err error) {
+	return c.GetWithCtx(context.Background(), uri)
+}
+
+func (c *Client) GetWithCtx(ctx context.Context, uri string) (resp *Response, err error) {
 	u, err := c.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(http.MethodGet, u, nil)
+	req, err := c.makeRequest(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return
 	}

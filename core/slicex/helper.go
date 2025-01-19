@@ -1,6 +1,7 @@
 package slicex
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -115,14 +116,23 @@ func MustMap[T any, R any](s []T, f func(item T) R) []R {
 	return ret
 }
 
-func Filter[T any](s []T, f func(item T) bool) []T {
+func FilterCtx[T any](ctx context.Context, s []T, f func(item T) bool) []T {
 	var tmp []T
 	for _, item := range s {
-		if f(item) {
-			tmp = append(tmp, item)
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			if f(item) {
+				tmp = append(tmp, item)
+			}
 		}
 	}
 	return tmp
+}
+
+func Filter[T any](s []T, f func(item T) bool) []T {
+	return FilterCtx(context.Background(), s, f)
 }
 
 // ToMap convert a slice to a map, with specified key and value using the function.

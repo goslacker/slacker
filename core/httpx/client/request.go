@@ -2,13 +2,14 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
 )
 
-func NewRequest(method string, url string, body any, cookies []*http.Cookie, headers http.Header) (req *Request, err error) {
+func NewRequest(ctx context.Context, method string, url string, body any, cookies []*http.Cookie, headers http.Header) (req *Request, err error) {
 	req = &Request{}
 
 	var b io.Reader
@@ -31,7 +32,7 @@ func NewRequest(method string, url string, body any, cookies []*http.Cookie, hea
 		}
 	}
 
-	r, err := http.NewRequest(method, url, b)
+	r, err := http.NewRequestWithContext(ctx, method, url, b)
 	if err != nil {
 		return
 	}
