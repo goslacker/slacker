@@ -1,7 +1,10 @@
 package client
 
+import "context"
+
 type AIClient interface {
 	ChatCompletion(req *ChatCompletionReq) (resp *ChatCompletionResp, err error)
+	ChatCompletionWithCtx(ctx context.Context, req *ChatCompletionReq) (resp *ChatCompletionResp, err error)
 }
 
 type ChatCompletionReq struct {

@@ -1,6 +1,7 @@
 package zhipu
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -35,9 +36,13 @@ type Client struct {
 }
 
 func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
+	return c.ChatCompletionWithCtx(context.Background(), req)
+}
+
+func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
 	request := FromStdChatCompletionReq(req)
 
-	response, err := c.httpClient.PostJson("chat/completions", request)
+	response, err := c.httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
 	if err != nil {
 		return
 	}

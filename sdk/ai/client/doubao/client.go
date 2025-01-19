@@ -41,8 +41,11 @@ type Client struct {
 }
 
 func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
+	return c.ChatCompletionWithCtx(context.Background(), req)
+}
+
+func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
 	clit := arkruntime.NewClientWithApiKey(c.apiKey)
-	ctx := context.Background()
 
 	request := model.ChatCompletionRequest{
 		Model: c.model,
