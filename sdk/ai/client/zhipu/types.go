@@ -24,7 +24,7 @@ func FromStdChatCompletionReq(req *client.ChatCompletionReq) *GLM4ChatCompletion
 				m.Content = slicex.MustMap(x, func(item client.Content) Content {
 					c := Content{
 						Text: item.Text,
-						Type: item.Type,
+						Type: string(item.Type),
 					}
 					if item.Type == "image_url" {
 						c.ImageUrl = &ImageUrl{
@@ -37,7 +37,7 @@ func FromStdChatCompletionReq(req *client.ChatCompletionReq) *GLM4ChatCompletion
 				m.Content = slicex.MustMap(x, func(item *client.Content) Content {
 					c := Content{
 						Text: item.Text,
-						Type: item.Type,
+						Type: string(item.Type),
 					}
 					if item.Type == "image_url" {
 						c.ImageUrl = &ImageUrl{

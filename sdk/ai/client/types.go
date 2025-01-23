@@ -1,6 +1,33 @@
 package client
 
-import "context"
+import (
+	"context"
+	"net/http"
+)
+
+type NewOptions struct {
+	Transport *http.Transport
+	Header    http.Header
+	BaseUrl   string
+}
+
+func WithHttpTransport(transport *http.Transport) func(*NewOptions) {
+	return func(opts *NewOptions) {
+		opts.Transport = transport
+	}
+}
+
+func WithHttpHeader(header http.Header) func(*NewOptions) {
+	return func(opts *NewOptions) {
+		opts.Header = header
+	}
+}
+
+func WithBaseUrl(baseUrl string) func(*NewOptions) {
+	return func(opts *NewOptions) {
+		opts.BaseUrl = baseUrl
+	}
+}
 
 type AIClient interface {
 	ChatCompletion(req *ChatCompletionReq) (resp *ChatCompletionResp, err error)
@@ -84,14 +111,6 @@ type Message struct {
 	ToolCallID string     `json:"toolCallId,omitempty"`
 }
 
-type ToolType string
-
-const (
-	ToolTypeFunction  ToolType = "function"
-	ToolTypeRetrieval ToolType = "retrieval"
-	ToolTypeWebSearch ToolType = "webSearch"
-)
-
 type Tool struct {
 	Type      ToolType   `json:"type"`
 	Function  *Function  `json:"function,omitempty"`
@@ -129,17 +148,10 @@ type Property struct {
 	Enum        []string `json:"enum,omitempty"`
 }
 
-type ContentType string
-
-const (
-	ContentTypeText     ContentType = "text"
-	ContentTypeImageUrl ContentType = "image_url"
-)
-
 type Content struct {
-	Type     string `json:"type"`
-	Text     string `json:"text,omitempty"`
-	ImageUrl string `json:"imageUrl,omitempty"`
+	Type     ContentType `json:"type"`
+	Text     string      `json:"text,omitempty"`
+	ImageUrl string      `json:"imageUrl,omitempty"`
 }
 
 type ToolCall struct {
@@ -155,4 +167,19 @@ const (
 	RoleUser      Role = "user"
 	RoleAssistant Role = "assistant"
 	RoleTool      Role = "tool"
+)
+
+type ToolType string
+
+const (
+	ToolTypeFunction  ToolType = "function"
+	ToolTypeRetrieval ToolType = "retrieval"
+	ToolTypeWebSearch ToolType = "webSearch"
+)
+
+type ContentType string
+
+const (
+	ContentTypeText     ContentType = "text"
+	ContentTypeImageUrl ContentType = "image_url"
 )

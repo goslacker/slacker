@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	httpClient "github.com/goslacker/slacker/core/httpx/client"
 	"github.com/goslacker/slacker/core/slicex"
 	"github.com/goslacker/slacker/sdk/ai/client"
 
@@ -19,25 +18,30 @@ func init() {
 	client.Register("doubao-pro-32k", NewClient)
 }
 
-func NewClient(apiKey string) client.AIClient {
+func NewClient(apiKey string, options ...func(newOptions *client.NewOptions)) client.AIClient {
+	opts := &client.NewOptions{}
+	for _, o := range options {
+		o(opts)
+	}
+
 	a := strings.Split(apiKey, "|")
 	return &Client{
-		model:  a[0],
-		apiKey: a[1],
-		httpClient: httpClient.NewClient(
-			httpClient.WithBaseUrl("https://ark.cn-beijing.volces.com/api/v3"),
-			httpClient.WithHeader(http.Header{
-				"Authorization": {"Bearer " + apiKey},
-				"Content-Type":  {"application/json"},
-			}),
-		),
+		model:     a[0],
+		apiKey:    a[1],
+		transport: opts.Transport,
+		baseUrl:   opts.BaseUrl,
 	}
 }
 
 type Client struct {
-	model      string
-	apiKey     string
-	httpClient *httpClient.Client
+	model     string
+	apiKey    string
+	transport *http.Transport
+	baseUrl   string
+}
+
+func (c *Client) SetBaseUrl(baseUrl string) {
+	panic("implement me")
 }
 
 func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
@@ -45,7 +49,17 @@ func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.Cha
 }
 
 func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
-	clit := arkruntime.NewClientWithApiKey(c.apiKey)
+	var clit *arkruntime.Client
+	//不导出就很迷
+	if c.transport != nil && c.baseUrl != "" {
+		clit = arkruntime.NewClientWithApiKey(c.apiKey, arkruntime.WithHTTPClient(&http.Client{Transport: c.transport}), arkruntime.WithBaseUrl(c.baseUrl))
+	} else if c.transport != nil {
+		clit = arkruntime.NewClientWithApiKey(c.apiKey, arkruntime.WithHTTPClient(&http.Client{Transport: c.transport}))
+	} else if c.baseUrl != "" {
+		clit = arkruntime.NewClientWithApiKey(c.apiKey, arkruntime.WithBaseUrl(c.baseUrl))
+	} else {
+		clit = arkruntime.NewClientWithApiKey(c.apiKey)
+	}
 
 	request := model.ChatCompletionRequest{
 		Model: c.model,
