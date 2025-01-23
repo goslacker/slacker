@@ -21,6 +21,12 @@ func WithHeader(header http.Header) func(*Client) {
 	}
 }
 
+func WithTransport(transport *http.Transport) func(*Client) {
+	return func(client *Client) {
+		client.transport = transport
+	}
+}
+
 func NewClient(opts ...func(*Client)) *Client {
 	c := &Client{
 		cookies: make([]*http.Cookie, 0),
@@ -36,17 +42,17 @@ func NewClient(opts ...func(*Client)) *Client {
 }
 
 type Client struct {
-	cookies []*http.Cookie
-	headers http.Header
-	clone   int
-	queries url.Values
-	debug   bool
-	baseUrl string
+	cookies   []*http.Cookie
+	headers   http.Header
+	clone     int
+	queries   url.Values
+	debug     bool
+	baseUrl   string
+	transport *http.Transport
 }
 
-func (c *Client) BaseUrl(baseUrl string) (client *Client) {
-	client = c.Clone()
-	client.baseUrl = strings.TrimRight(baseUrl, "/")
+func (c *Client) SetBaseUrl(baseUrl string) {
+	c.baseUrl = strings.TrimRight(baseUrl, "/")
 	return
 }
 
@@ -90,6 +96,12 @@ func (c *Client) SetHeader(key string, values ...string) (client *Client) {
 	return
 }
 
+func (c *Client) SetTransport(transport *http.Transport) (client *Client) {
+	client = c.Clone()
+	client.transport = transport
+	return
+}
+
 func (c *Client) SetQueries(queries map[string][]string) (client *Client) {
 	client = c.Clone()
 	client.queries = queries
@@ -125,7 +137,7 @@ func (c *Client) Clone() *Client {
 		if err != nil {
 			panic(err)
 		}
-		return &Client{
+		client := &Client{
 			cookies: c.cookies[:],
 			headers: c.headers.Clone(),
 			clone:   1,
@@ -133,6 +145,10 @@ func (c *Client) Clone() *Client {
 			debug:   c.debug,
 			baseUrl: c.baseUrl,
 		}
+		if client.transport != nil {
+			client.transport = c.transport.Clone()
+		}
+		return client
 	case 1:
 		return c
 	default:
@@ -190,19 +206,20 @@ func (c *Client) Post(uri string, body any) (resp *Response, err error) {
 }
 
 func (c *Client) PostWithCtx(ctx context.Context, uri string, body any) (resp *Response, err error) {
-	u, err := c.buildUrl(uri)
+	client := c.Clone()
+	u, err := client.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(ctx, http.MethodPost, u, body)
+	req, err := client.makeRequest(ctx, http.MethodPost, u, body)
 	if err != nil {
 		return
 	}
 
-	resp, err = c.Do(req)
+	resp, err = client.Do(req)
 
-	if c.debug {
+	if client.debug {
 		if resp == nil {
 			slog.Debug("request debug", "request", req.Info(), "response", nil)
 		} else {
@@ -226,19 +243,20 @@ func (c *Client) Put(uri string, body any) (resp *Response, err error) {
 }
 
 func (c *Client) PutWithCtx(ctx context.Context, uri string, body any) (resp *Response, err error) {
-	u, err := c.buildUrl(uri)
+	client := c.Clone()
+	u, err := client.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(ctx, http.MethodPut, u, body)
+	req, err := client.makeRequest(ctx, http.MethodPut, u, body)
 	if err != nil {
 		return
 	}
 
-	resp, err = c.Do(req)
+	resp, err = client.Do(req)
 
-	if c.debug {
+	if client.debug {
 		if resp == nil {
 			slog.Debug("request debug", "request", req.Info(), "response", nil)
 		} else {
@@ -254,19 +272,20 @@ func (c *Client) Delete(uri string) (resp *Response, err error) {
 }
 
 func (c *Client) DeleteWithCtx(ctx context.Context, uri string) (resp *Response, err error) {
-	u, err := c.buildUrl(uri)
+	client := c.Clone()
+	u, err := client.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(ctx, http.MethodDelete, u, nil)
+	req, err := client.makeRequest(ctx, http.MethodDelete, u, nil)
 	if err != nil {
 		return
 	}
 
-	resp, err = c.Do(req)
+	resp, err = client.Do(req)
 
-	if c.debug {
+	if client.debug {
 		if resp == nil {
 			slog.Debug("request debug", "request", req.Info(), "response", nil)
 		} else {
@@ -282,19 +301,20 @@ func (c *Client) Get(uri string) (resp *Response, err error) {
 }
 
 func (c *Client) GetWithCtx(ctx context.Context, uri string) (resp *Response, err error) {
-	u, err := c.buildUrl(uri)
+	client := c.Clone()
+	u, err := client.buildUrl(uri)
 	if err != nil {
 		return
 	}
 
-	req, err := c.makeRequest(ctx, http.MethodGet, u, nil)
+	req, err := client.makeRequest(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return
 	}
 
-	resp, err = c.Do(req)
+	resp, err = client.Do(req)
 
-	if c.debug {
+	if client.debug {
 		if resp == nil {
 			slog.Debug("request debug", "request", req.Info(), "response", "null")
 		} else {

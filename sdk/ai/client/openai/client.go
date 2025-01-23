@@ -1,4 +1,4 @@
-package zhipu
+package openai
 
 import (
 	"context"
@@ -10,35 +10,31 @@ import (
 )
 
 func init() {
-	client.Register("glm-4-0520", NewClient)
-	client.Register("glm-4-plus", NewClient)
-	client.Register("glm-4v", NewClient)
-	client.Register("glm-4v-plus", NewClient)
+	client.Register("gpt-4o-2024-11-20", NewClient)
 }
 
-func NewClient(apiKey string, options ...func(newOptions *client.NewOptions)) client.AIClient {
-	opt := &client.NewOptions{}
+func NewClient(apiKey string, options ...func(*client.NewOptions)) client.AIClient {
+	opts := &client.NewOptions{}
 	for _, o := range options {
-		o(opt)
+		o(opts)
 	}
 
 	httpOptions := make([]func(*httpClient.Client), 0, 3)
-	if opt.Transport != nil {
-		httpOptions = append(httpOptions, httpClient.WithTransport(opt.Transport))
+	if opts.Transport != nil {
+		httpOptions = append(httpOptions, httpClient.WithTransport(opts.Transport))
 	}
-	if opt.BaseUrl != "" {
-		httpOptions = append(httpOptions, httpClient.WithBaseUrl(opt.BaseUrl))
+	if opts.BaseUrl != "" {
+		httpOptions = append(httpOptions, httpClient.WithBaseUrl(opts.BaseUrl))
 	} else {
-		httpOptions = append(httpOptions, httpClient.WithBaseUrl("https://open.bigmodel.cn/api/paas/v4"))
+		httpOptions = append(httpOptions, httpClient.WithBaseUrl("https://api.openai.com/v1"))
 	}
-	if len(opt.Header) > 0 {
-		opt.Header.Add("Authorization", "Bearer "+apiKey)
-	} else {
-		opt.Header = http.Header{
-			"Authorization": []string{"Bearer " + apiKey},
-		}
+
+	if len(opts.Header) == 0 {
+		opts.Header = http.Header{}
 	}
-	httpOptions = append(httpOptions, httpClient.WithHeader(opt.Header))
+	opts.Header.Add("Authorization", "Bearer "+apiKey)
+
+	httpOptions = append(httpOptions, httpClient.WithHeader(opts.Header))
 
 	return &Client{
 		apiKey:     apiKey,
@@ -51,25 +47,21 @@ type Client struct {
 	httpClient *httpClient.Client
 }
 
-func (c *Client) SetBaseUrl(baseUrl string) {
-	c.httpClient.SetBaseUrl(baseUrl)
-}
-
 func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
 	return c.ChatCompletionWithCtx(context.Background(), req)
 }
 
 func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
 	request := FromStdChatCompletionReq(req)
-
 	response, err := c.httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
 	if err != nil {
 		return
 	}
-	r := &GLM4ChatCompletionResp{}
+
+	r := &ChatCompletionResp{}
 	if response.StatusCode > 400 {
 		r, _ := response.GetBody()
-		err = fmt.Errorf("request zhipu <chat/completions> failed: %s", string(r))
+		err = fmt.Errorf("request openai <chat/completions> failed: %s", string(r))
 	} else {
 		err = response.ScanJson(r)
 	}
@@ -78,7 +70,7 @@ func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatComp
 	}
 
 	if r.Error != nil {
-		return nil, fmt.Errorf("request zhipu <chat/completions> failed: code: %s, message: %s", r.Error.Code, r.Error.Message)
+		return nil, fmt.Errorf("request openai <chat/completions> failed: code: %s, message: %s", r.Error.Code, r.Error.Message)
 	}
 
 	resp = r.IntoStdChatCompletionResp()

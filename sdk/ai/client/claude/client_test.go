@@ -1,20 +1,45 @@
-package zhipu
+package claude
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/binary"
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/goslacker/slacker/sdk/ai/client"
 
 	"github.com/stretchr/testify/require"
 )
 
+const key = ""
+const apiKey = ""
+
+func genPwd(saltBytes []byte) string {
+	hmacHash := hmac.New(sha1.New, []byte(key))
+	hash := hmacHash.Sum(saltBytes)
+
+	offset := hash[len(hash)-1] & 0x0F
+	truncatedHash := hash[offset : offset+4]
+	code := binary.BigEndian.Uint32(truncatedHash) & 0x7FFFFFFF
+	return strconv.FormatUint(uint64(code), 10)
+}
+
 func TestClient(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	c := NewClient("")
+	saltBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(saltBytes, uint64(time.Now().Unix()))
+
+	c := NewClient(apiKey, client.WithBaseUrl("http:///v1"), client.WithHttpHeader(http.Header{
+		"X-Forwarded-Host": []string{"https://api.anthropic.com"},
+		"Authorization":    []string{genPwd(saltBytes)},
+	}))
 	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
-		Model:          "glm-4-plus",
+		Model:          "claude-3-5-sonnet-20241022",
 		ResponseFormat: map[string]string{"type": "json_object"},
 		Messages: []client.Message{
 			{
@@ -26,6 +51,7 @@ func TestClient(t *testing.T) {
 				Content: "你好",
 			},
 		},
+		MaxTokens: 8192,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -675,34 +701,34 @@ func TestClient_ChatCompletion(t *testing.T) {
 	println(string(j))
 }
 
-func TestReadPic(t *testing.T) {
-	t.Skip()
-	slog.SetLogLoggerLevel(slog.LevelDebug)
-	c := NewClient("")
-	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
-		Model: "glm-4v",
-		Messages: []client.Message{
-			{Role: "user", Content: []client.Content{
-				{
-					Type: client.ContentTypeText,
-					Text: "图片描述了什么",
-				},
-				{
-					Type:     client.ContentTypeImageUrl,
-					ImageUrl: "https://img1.baidu.com/it/u=1369931113,3388870256&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1703696400&t=f3028c7a1dca43a080aeb8239f09cc2f",
-				},
-			}},
-		},
-	})
-	require.NoError(t, err)
-	j, err := json.Marshal(resp.Choices[0].Message)
-	require.NoError(t, err)
-	println(string(j))
-
-	j, err = json.Marshal(resp.Usage)
-	require.NoError(t, err)
-	println(string(j))
-}
+//func TestReadPic(t *testing.T) {
+//	t.Skip()
+//	slog.SetLogLoggerLevel(slog.LevelDebug)
+//	c := NewClient("")
+//	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
+//		Model: "glm-4v",
+//		Messages: []client.Message{
+//			{Role: "user", Content: []client.Content{
+//				{
+//					Type: string(client.ContentTypeText),
+//					Text: "图片描述了什么",
+//				},
+//				{
+//					Type:     string(client.ContentTypeImageUrl),
+//					ImageUrl: "https://img1.baidu.com/it/u=1369931113,3388870256&fm=253&app=138&size=w931&n=0&f=JPEG&fmt=auto?sec=1703696400&t=f3028c7a1dca43a080aeb8239f09cc2f",
+//				},
+//			}},
+//		},
+//	})
+//	require.NoError(t, err)
+//	j, err := json.Marshal(resp.Choices[0].Message)
+//	require.NoError(t, err)
+//	println(string(j))
+//
+//	j, err = json.Marshal(resp.Usage)
+//	require.NoError(t, err)
+//	println(string(j))
+//}
 
 //{"ContentString":"","ContentArray":null,"Role":"assistant","Name":"","ToolCalls":[{"ID":"call_20240727160630c0ee7f4b0bfc40d4","Type":"","Function":{"Description":"","Name":"get_weather_info","Parameters":{"Type":"","Properties":null,"Required":null},"Arguments":"{\"city\": \"成都\"}"}}],"ToolCallID":""}
 //[

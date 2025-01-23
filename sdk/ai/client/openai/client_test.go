@@ -1,20 +1,44 @@
-package zhipu
+package openai
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/binary"
 	"encoding/json"
 	"log/slog"
+	"net/http"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/goslacker/slacker/sdk/ai/client"
 
 	"github.com/stretchr/testify/require"
 )
 
+const key = ""
+const apiKey = ""
+
+func genPwd(saltBytes []byte) string {
+	hmacHash := hmac.New(sha1.New, []byte(key))
+	hash := hmacHash.Sum(saltBytes)
+
+	offset := hash[len(hash)-1] & 0x0F
+	truncatedHash := hash[offset : offset+4]
+	code := binary.BigEndian.Uint32(truncatedHash) & 0x7FFFFFFF
+	return strconv.FormatUint(uint64(code), 10)
+}
+
 func TestClient(t *testing.T) {
 	slog.SetLogLoggerLevel(slog.LevelDebug)
-	c := NewClient("")
+	saltBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(saltBytes, uint64(time.Now().Unix()))
+	//code := genPwd(saltBytes)
+	c := NewClient(apiKey, client.WithBaseUrl("http:///v1"), client.WithHttpHeader(http.Header{
+		"X-Forwarded-Host": []string{"https://api.openai.com"},
+	}))
 	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
-		Model:          "glm-4-plus",
+		Model:          "gpt-4o-2024-11-20",
 		ResponseFormat: map[string]string{"type": "json_object"},
 		Messages: []client.Message{
 			{
