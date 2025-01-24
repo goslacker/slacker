@@ -40,15 +40,11 @@ type Client struct {
 	baseUrl   string
 }
 
-func (c *Client) SetBaseUrl(baseUrl string) {
-	panic("implement me")
+func (c *Client) ChatCompletion(req *client.ChatCompletionReq, opts ...func(*client.ReqOptions)) (resp *client.ChatCompletionResp, err error) {
+	return c.ChatCompletionWithCtx(context.Background(), req, opts...)
 }
 
-func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
-	return c.ChatCompletionWithCtx(context.Background(), req)
-}
-
-func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
+func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq, opts ...func(*client.ReqOptions)) (resp *client.ChatCompletionResp, err error) {
 	var clit *arkruntime.Client
 	//不导出就很迷
 	if c.transport != nil && c.baseUrl != "" {

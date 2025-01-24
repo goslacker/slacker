@@ -29,9 +29,19 @@ func WithBaseUrl(baseUrl string) func(*NewOptions) {
 	}
 }
 
+type ReqOptions struct {
+	Header http.Header
+}
+
+func WithReqHeader(header http.Header) func(*ReqOptions) {
+	return func(opts *ReqOptions) {
+		opts.Header = header
+	}
+}
+
 type AIClient interface {
-	ChatCompletion(req *ChatCompletionReq) (resp *ChatCompletionResp, err error)
-	ChatCompletionWithCtx(ctx context.Context, req *ChatCompletionReq) (resp *ChatCompletionResp, err error)
+	ChatCompletion(req *ChatCompletionReq, opts ...func(*ReqOptions)) (resp *ChatCompletionResp, err error)
+	ChatCompletionWithCtx(ctx context.Context, req *ChatCompletionReq, opts ...func(*ReqOptions)) (resp *ChatCompletionResp, err error)
 }
 
 type ChatCompletionReq struct {

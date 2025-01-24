@@ -55,14 +55,26 @@ func (c *Client) SetBaseUrl(baseUrl string) {
 	c.httpClient.SetBaseUrl(baseUrl)
 }
 
-func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
-	return c.ChatCompletionWithCtx(context.Background(), req)
+func (c *Client) ChatCompletion(req *client.ChatCompletionReq, opts ...func(*client.ReqOptions)) (resp *client.ChatCompletionResp, err error) {
+	return c.ChatCompletionWithCtx(context.Background(), req, opts...)
 }
 
-func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
+func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq, opts ...func(*client.ReqOptions)) (resp *client.ChatCompletionResp, err error) {
+	options := &client.ReqOptions{}
+	for _, o := range opts {
+		o(options)
+	}
+
+	httpClient := c.httpClient
+	if len(options.Header) > 0 {
+		for k, v := range options.Header {
+			httpClient = httpClient.AddHeader(k, v...)
+		}
+	}
+
 	request := FromStdChatCompletionReq(req)
 
-	response, err := c.httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
+	response, err := httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
 	if err != nil {
 		return
 	}

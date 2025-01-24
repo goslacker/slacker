@@ -47,13 +47,26 @@ type Client struct {
 	httpClient *httpClient.Client
 }
 
-func (c *Client) ChatCompletion(req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
-	return c.ChatCompletionWithCtx(context.Background(), req)
+func (c *Client) ChatCompletion(req *client.ChatCompletionReq, opts ...func(*client.ReqOptions)) (resp *client.ChatCompletionResp, err error) {
+	return c.ChatCompletionWithCtx(context.Background(), req, opts...)
 }
 
-func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq) (resp *client.ChatCompletionResp, err error) {
+func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatCompletionReq, opts ...func(*client.ReqOptions)) (resp *client.ChatCompletionResp, err error) {
+
+	opt := &client.ReqOptions{}
+	for _, o := range opts {
+		o(opt)
+	}
+
+	httpClient := c.httpClient
+	if len(opt.Header) > 0 {
+		for k, v := range opt.Header {
+			httpClient = httpClient.AddHeader(k, v...)
+		}
+	}
+
 	request := FromStdChatCompletionReq(req)
-	response, err := c.httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
+	response, err := httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
 	if err != nil {
 		return
 	}
@@ -75,7 +88,7 @@ func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatComp
 
 	resp = r.IntoStdChatCompletionResp()
 
-	slog.Debug("usage", "completion_tokens", resp.Usage.CompletionTokens, "prompt_tokens", resp.Usage.PromptTokens, "total_tokens", resp.Usage.TotalTokens)
+	slog.Debug("usage openai", "completion_tokens", resp.Usage.CompletionTokens, "prompt_tokens", resp.Usage.PromptTokens, "total_tokens", resp.Usage.TotalTokens)
 
 	return
 }

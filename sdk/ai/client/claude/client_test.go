@@ -19,9 +19,13 @@ import (
 const key = ""
 const apiKey = ""
 
-func genPwd(saltBytes []byte) string {
+func genPwd(t int64) string {
+	saltBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(saltBytes, uint64(t))
+
 	hmacHash := hmac.New(sha1.New, []byte(key))
-	hash := hmacHash.Sum(saltBytes)
+	hmacHash.Write(saltBytes)
+	hash := hmacHash.Sum(nil)
 
 	offset := hash[len(hash)-1] & 0x0F
 	truncatedHash := hash[offset : offset+4]
@@ -36,7 +40,6 @@ func TestClient(t *testing.T) {
 
 	c := NewClient(apiKey, client.WithBaseUrl("http:///v1"), client.WithHttpHeader(http.Header{
 		"X-Forwarded-Host": []string{"https://api.anthropic.com"},
-		"Authorization":    []string{genPwd(saltBytes)},
 	}))
 	resp, err := c.ChatCompletion(&client.ChatCompletionReq{
 		Model:          "claude-3-5-sonnet-20241022",
@@ -52,7 +55,9 @@ func TestClient(t *testing.T) {
 			},
 		},
 		MaxTokens: 8192,
-	})
+	}, client.WithReqHeader(http.Header{
+		"Proxy-Authorization": []string{genPwd(time.Now().Unix())},
+	}))
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	b, _ := json.Marshal(resp)

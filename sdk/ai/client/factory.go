@@ -18,10 +18,5 @@ func New(model string, apiKey string, options ...func(*NewOptions)) AIClient {
 		panic(fmt.Errorf("client of model <%s> not found", model))
 	}
 
-	opts := &NewOptions{}
-	for _, o := range options {
-		o(opts)
-	}
-
-	return i(apiKey)
+	return i(apiKey, options...)
 }
