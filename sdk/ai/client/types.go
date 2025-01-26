@@ -2,7 +2,12 @@ package client
 
 import (
 	"context"
+	"errors"
 	"net/http"
+)
+
+var (
+	ErrRateLimit = errors.New("rate limit exceeded")
 )
 
 type NewOptions struct {

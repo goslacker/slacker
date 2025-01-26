@@ -3,6 +3,7 @@ package openai
 import (
 	"context"
 	"fmt"
+	"github.com/goslacker/slacker/core/errx"
 	httpClient "github.com/goslacker/slacker/core/httpx/client"
 	"github.com/goslacker/slacker/sdk/ai/client"
 	"log/slog"
@@ -74,16 +75,17 @@ func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatComp
 	r := &ChatCompletionResp{}
 	if response.StatusCode > 400 {
 		r, _ := response.GetBody()
-		err = fmt.Errorf("request openai <chat/completions> failed: %s", string(r))
+		switch response.StatusCode {
+		case 429:
+			err = errx.Wrap(client.ErrRateLimit, errx.WithMsg(fmt.Sprintf("request openai <chat/completions> failed: %s", string(r))))
+		default:
+			err = errx.Wrap(fmt.Errorf("request openai <chat/completions> failed: %s", string(r)))
+		}
 	} else {
-		err = response.ScanJson(r)
+		err = errx.Wrap(response.ScanJson(r))
 	}
 	if err != nil {
 		return
-	}
-
-	if r.Error != nil {
-		return nil, fmt.Errorf("request openai <chat/completions> failed: code: %s, message: %s", r.Error.Code, r.Error.Message)
 	}
 
 	resp = r.IntoStdChatCompletionResp()
