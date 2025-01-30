@@ -106,6 +106,17 @@ func Map[T any, R any](s []T, f func(item T) (R, error)) ([]R, error) {
 	})
 }
 
+func MapIdx[T any, R any](s []T, f func(idx int, item T) (R, error)) ([]R, error) {
+	return MapFilterIdx(s, func(idx int, item T) (r R, ok bool, err error) {
+		r, err = f(idx, item)
+		if err != nil {
+			return
+		}
+		ok = true
+		return
+	})
+}
+
 // MustMap maps the slice to a new slice by applying the function to each element.
 func MustMap[T any, R any](s []T, f func(item T) R) []R {
 	r, _ := Map(s, func(item T) (R, error) {
@@ -114,10 +125,23 @@ func MustMap[T any, R any](s []T, f func(item T) R) []R {
 	return r
 }
 
+func MustMapIdx[T any, R any](s []T, f func(idx int, item T) R) []R {
+	r, _ := MapIdx(s, func(idx int, item T) (R, error) {
+		return f(idx, item), nil
+	})
+	return r
+}
+
 func MapFilter[T any, R any](s []T, f func(item T) (R, bool, error)) ([]R, error) {
+	return MapFilterIdx(s, func(idx int, item T) (R, bool, error) {
+		return f(item)
+	})
+}
+
+func MapFilterIdx[T any, R any](s []T, f func(idx int, item T) (R, bool, error)) ([]R, error) {
 	ret := make([]R, 0, len(s))
-	for _, item := range s {
-		tmp, ok, err := f(item)
+	for idx, item := range s {
+		tmp, ok, err := f(idx, item)
 		if err != nil {
 			return nil, err
 		}

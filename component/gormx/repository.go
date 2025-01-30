@@ -105,6 +105,31 @@ func (r *Repository[PO, Entity]) Create(entities ...*Entity) (err error) {
 	return
 }
 
+func (r *Repository[PO, Entity]) CreateOr(onConflict clause.OnConflict, entities ...*Entity) (err error) {
+	pos := make([]*PO, 0, len(entities))
+	for _, item := range entities {
+		po := new(PO)
+		err = r.E2M(po, item)
+		if err != nil {
+			return
+		}
+		pos = append(pos, po)
+	}
+
+	err = r.DB.Clauses(onConflict).Create(&pos).Error
+	if err != nil {
+		return
+	}
+
+	for index, item := range pos {
+		err = r.M2E(entities[index], item)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (r *Repository[PO, Entity]) Update(entityOrMap any, conditions ...any) (err error) {
 	switch x := entityOrMap.(type) {
 	case *Entity:
