@@ -416,9 +416,9 @@ func Apply(db *gorm.DB, conditions ...any) (newDB *gorm.DB, err error) {
 func applyCondition(db *gorm.DB, conditions ...database.Condition) (newDB *gorm.DB, err error) {
 	newDB = db
 	for _, c := range conditions {
-		if len(c) < 2 {
-			return db, errors.New("condition require at least 2 params")
-		}
+		//if len(c) < 2 {
+		//	return db, errors.New("condition require at least 2 params")
+		//}
 
 		list := []string{
 			" and ",
