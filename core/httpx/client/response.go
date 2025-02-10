@@ -8,6 +8,9 @@ import (
 )
 
 func NewResponse(r *http.Response) *Response {
+	if r == nil {
+		return nil
+	}
 	return &Response{
 		Response: r,
 	}

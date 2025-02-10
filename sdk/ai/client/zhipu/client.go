@@ -42,13 +42,13 @@ func NewClient(apiKey string, options ...func(newOptions *client.NewOptions)) cl
 
 	return &Client{
 		apiKey:     apiKey,
-		httpClient: httpClient.NewClient(httpOptions...),
+		httpClient: httpClient.New(httpOptions...),
 	}
 }
 
 type Client struct {
 	apiKey     string
-	httpClient *httpClient.Client
+	httpClient httpClient.Client
 }
 
 func (c *Client) SetBaseUrl(baseUrl string) {
@@ -74,7 +74,7 @@ func (c *Client) ChatCompletionWithCtx(ctx context.Context, req *client.ChatComp
 
 	request := FromStdChatCompletionReq(req)
 
-	response, err := httpClient.PostJsonWithCtx(ctx, "chat/completions", request)
+	response, err := httpClient.PostJsonCtx(ctx, "chat/completions", request)
 	if err != nil {
 		return
 	}
