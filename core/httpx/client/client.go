@@ -1,10 +1,13 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"github.com/goslacker/slacker/core/slicex"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -168,8 +171,9 @@ func (c Client) makeRequest(ctx context.Context, method string, uri string, body
 }
 
 func (c Client) Do(request *Request) (resp *Response, err error) {
-	httpClient := http.Client{
-		Transport: c.transport,
+	httpClient := http.Client{}
+	if c.transport != nil {
+		httpClient.Transport = c.transport
 	}
 	response, err := httpClient.Do(request.Request)
 	if err == nil {
@@ -212,6 +216,43 @@ func (c Client) Post(uri string, body any) (resp *Response, err error) {
 	return c.do(context.Background(), http.MethodPost, uri, body)
 }
 
+func (c Client) PostForm(uri string, fields map[string]string, files map[string]*File) (resp *Response, err error) {
+	return c.PostFormCtx(context.Background(), uri, fields, files)
+}
+
+func (c Client) PostFormCtx(ctx context.Context, uri string, fields map[string]string, files map[string]*File) (resp *Response, err error) {
+	body := bytes.NewBuffer(nil)
+	w := multipart.NewWriter(body)
+	for key, value := range fields {
+		err = w.WriteField(key, value)
+		if err != nil {
+			return
+		}
+	}
+	for key, file := range files {
+		var (
+			writer io.Writer
+			reader io.ReadCloser
+		)
+		writer, err = w.CreateFormFile(key, file.Name)
+		if err != nil {
+			return
+		}
+		reader, err = file.Open()
+		if err != nil {
+			return
+		}
+		_, err = io.Copy(writer, reader)
+		reader.Close()
+		if err != nil {
+			return
+		}
+	}
+	w.Close()
+
+	return c.SetHeader("Content-Type", w.FormDataContentType()).do(ctx, http.MethodPost, uri, body)
+}
+
 func (c Client) PutJson(uri string, body any) (resp *Response, err error) {
 	return c.PutJsonCtx(context.Background(), uri, body)
 }
@@ -225,11 +266,19 @@ func (c Client) Put(uri string, body any) (resp *Response, err error) {
 }
 
 func (c Client) Delete(uri string) (resp *Response, err error) {
-	return c.do(context.Background(), http.MethodDelete, uri, nil)
+	return c.DeleteCtx(context.Background(), uri)
+}
+
+func (c Client) DeleteCtx(ctx context.Context, uri string) (resp *Response, err error) {
+	return c.do(ctx, http.MethodDelete, uri, nil)
 }
 
 func (c Client) Get(uri string) (resp *Response, err error) {
-	return c.do(context.Background(), http.MethodGet, uri, nil)
+	return c.GetCtx(context.Background(), uri)
+}
+
+func (c Client) GetCtx(ctx context.Context, uri string) (resp *Response, err error) {
+	return c.do(ctx, http.MethodGet, uri, nil)
 }
 
 func (c Client) do(ctx context.Context, method string, uri string, body any) (resp *Response, err error) {

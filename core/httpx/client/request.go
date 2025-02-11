@@ -21,6 +21,12 @@ func NewRequest(ctx context.Context, method string, url string, body any, cookie
 		case []byte:
 			b = bytes.NewReader(x)
 			req.bodyCache = string(x)
+		case bytes.Buffer:
+			b = &x
+			req.bodyCache = x.String()
+		case *bytes.Buffer:
+			b = x
+			req.bodyCache = x.String()
 		default:
 			var byts []byte
 			byts, err = json.Marshal(body)

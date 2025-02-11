@@ -64,3 +64,9 @@ func (r *Response) GetBody() (body []byte, err error) {
 	}
 	return
 }
+
+func (r *Response) CopyTo(writer io.Writer) (n int64, err error) {
+	defer r.Body.Close()
+	n, err = io.Copy(writer, r.Body)
+	return
+}

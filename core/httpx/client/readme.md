@@ -4,7 +4,7 @@
 请求方法:
 - [x] PostJson
 - [ ] PostXml
-- [ ] PostForm
+- [x] PostForm
 - [x] PutJson
 - [ ] PutXml
 - [x] Get
