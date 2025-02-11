@@ -281,16 +281,15 @@ type Error struct {
 }
 
 type MessageResp struct {
-	ID                string    `json:"id"`
-	Content           []Content `json:"content"`
-	MultipartContents []MultipartContent
-	Model             string `json:"model"`
-	Role              string `json:"role"`
-	StopReason        string `json:"stop_reason"`
-	StopSequence      string `json:"stop_sequence"`
-	Type              string `json:"type"`
-	Usage             Usage  `json:"usage"`
-	Error             *Error `json:"error"`
+	ID           string             `json:"id"`
+	Content      []MultipartContent `json:"content"`
+	Model        string             `json:"model"`
+	Role         string             `json:"role"`
+	StopReason   string             `json:"stop_reason"`
+	StopSequence string             `json:"stop_sequence"`
+	Type         string             `json:"type"`
+	Usage        Usage              `json:"usage"`
+	Error        *Error             `json:"error"`
 }
 
 type Usage struct {
@@ -325,15 +324,6 @@ type InputSchema struct {
 	Type       string                     `json:"type"`
 	Properties map[string]client.Property `json:"properties"`
 	Required   []string                   `json:"required,omitempty"`
-}
-
-type Content struct {
-	Type      string         `json:"type"`
-	Text      string         `json:"text,omitempty"`
-	Source    *ImageSource   `json:"source,omitempty"`
-	ToolUseID string         `json:"tool_use_id,omitempty"`
-	Content   string         `json:"content,omitempty"`
-	Input     map[string]any `json:"input,omitempty"`
 }
 
 type ImageSource struct {
