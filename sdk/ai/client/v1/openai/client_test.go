@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -63,6 +64,14 @@ func TestClient(t *testing.T) {
 	require.NotNil(t, resp)
 	b, _ := json.Marshal(resp)
 	println(string(b))
+}
+
+func TestJson(t *testing.T) {
+	j := "{\"id\": \"batch_req_67ac5628702081909e2e7f9b9d7cb947\",\"custom_id\": \"553336580266262544\",\"response\": {\"status_code\": 200,\"request_id\": \"764992aab09cf7cfcc5c189012970228\",\"body\": {\"id\": \"chatcmpl-B021jN7JXKKbcHqnerpJQIAGtGtmp\",\"object\": \"chat.completion\",\"created\": 1739347491,\"model\": \"gpt-4o-2024-11-20\",\"choices\": [{\"index\": 0,\"message\": {\"role\": \"assistant\",\"content\": \"```json\\n{\\n \\\"records\\\": [\\n [\\n {\\n \\\"start\\\": \\\"2020-11-25 15:39:12\\\",\\n \\\"end\\\": \\\"2020-11-25 15:40:18\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2021-04-16 20:09:20\\\",\\n \\\"end\\\": \\\"2021-04-16 22:19:11\\\"\\n },\\n {\\n \\\"start\\\": \\\"2021-04-16 22:41:10\\\",\\n \\\"end\\\": \\\"2021-04-16 22:41:44\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2021-08-26 21:50:59\\\",\\n \\\"end\\\": \\\"2021-08-27 11:27:19\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2022-01-05 10:06:58\\\",\\n \\\"end\\\": \\\"2022-01-05 11:03:51\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2022-04-03 16:28:15\\\",\\n \\\"end\\\": \\\"2022-04-03 17:54:41\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2022-07-25 09:22:14\\\",\\n \\\"end\\\": \\\"2022-07-25 09:45:12\\\"\\n },\\n {\\n \\\"start\\\": \\\"2022-08-10 10:30:58\\\",\\n \\\"end\\\": \\\"2022-08-12 18:16:43\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2023-04-26 13:46:35\\\",\\n \\\"end\\\": \\\"2023-04-27 15:27:03\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2023-08-01 19:22:15\\\",\\n \\\"end\\\": \\\"2023-08-12 16:00:33\\\"\\n }\\n ],\\n [\\n {\\n \\\"start\\\": \\\"2024-06-05 16:08:23\\\",\\n \\\"end\\\": \\\"2024-06-05 16:09:58\\\"\\n }\\n ]\\n ]\\n}\\n```\",\"refusal\": null},\"logprobs\": null,\"finish_reason\": \"stop\"}],\"usage\": {\"prompt_tokens\": 7925,\"completion_tokens\": 490,\"total_tokens\": 8415,\"prompt_tokens_details\": {\"cached_tokens\": 0,\"audio_tokens\": 0},\"completion_tokens_details\": {\"reasoning_tokens\": 0,\"audio_tokens\": 0,\"accepted_prediction_tokens\": 0,\"rejected_prediction_tokens\": 0}},\"service_tier\": \"default\",\"system_fingerprint\": \"fp_e53e529665\"}},\"error\": null}"
+	var data BatchResult
+	err := json.Unmarshal([]byte(j), &data)
+	require.NoError(t, err)
+	fmt.Printf("%+v\n", data)
 }
 
 var productList = `[

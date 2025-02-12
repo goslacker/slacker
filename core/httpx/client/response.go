@@ -46,6 +46,7 @@ func (r *Response) Info() (info string) {
 	} else {
 		inf["body"] = "null"
 	}
+	inf["code"] = r.StatusCode
 
 	tmp, err := json.Marshal(inf)
 	if err != nil {

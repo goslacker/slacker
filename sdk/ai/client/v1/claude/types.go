@@ -333,10 +333,12 @@ type ImageSource struct {
 }
 
 type CreateBatchReq struct {
-	Requests []struct {
-		CustomerID string     `json:"customer_id"`
-		Params     MessageReq `json:"params"`
-	} `json:"requests"`
+	Requests []CreateBatchReqItem `json:"requests"`
+}
+
+type CreateBatchReqItem struct {
+	CustomID string     `json:"custom_id"`
+	Params   MessageReq `json:"params"`
 }
 
 type CreateBatchResp struct {
@@ -377,4 +379,12 @@ type RetrieveBatchResp struct {
 	CancelInitiatedAt time.Time `json:"cancel_initiated_at"`
 	ResultsUrl        string    `json:"results_url"`
 	Error             *Error    `json:"error"`
+}
+
+type BatchResult struct {
+	CustomId string `json:"custom_id"`
+	Result   struct {
+		Type    string      `json:"type"`
+		Message MessageResp `json:"message"`
+	} `json:"result"`
 }

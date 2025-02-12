@@ -2,6 +2,7 @@ package openai
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/goslacker/slacker/core/tool"
 	"github.com/goslacker/slacker/sdk/ai/client"
 )
@@ -11,6 +12,10 @@ type Error struct {
 	Type    string `json:"type"`
 	Param   string `json:"param"`
 	Code    string `json:"code"`
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("message: %s, type: %s, param: %s, code: %s", e.Message, e.Type, e.Param, e.Code)
 }
 
 func FromStdChatCompletionReq(req *client.ChatCompletionReq) (r *ChatCompletionReq) {
@@ -464,6 +469,7 @@ type BatchResponse struct {
 	ErrorFileID      *string       `json:"error_file_id,omitempty"`  // 错误文件的 ID（如果有错误）
 	CreatedAt        int64         `json:"created_at"`               // 任务创建时间（Unix 时间戳）
 	CompletedAt      *int64        `json:"completed_at,omitempty"`   // 任务完成时间（Unix 时间戳）
+	Error            *Error        `json:"error,omitempty"`
 }
 
 type BatchStatus string
@@ -512,4 +518,16 @@ type UploadResp struct {
 	Filename  string `json:"filename"`
 	Object    string `json:"object"`
 	Purpose   string `json:"purpose"`
+	Error     *Error `json:"error,omitempty"`
+}
+
+type BatchResult struct {
+	ID       string `json:"id"`
+	CustomID string `json:"custom_id"`
+	Response struct {
+		StatusCode int                `json:"status_code"`
+		RequestID  string             `json:"request_id"`
+		Body       ChatCompletionResp `json:"body"`
+	}
+	Error *Error `json:"error,omitempty"`
 }

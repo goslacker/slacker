@@ -1,12 +1,15 @@
 package claude
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/goslacker/slacker/core/errx"
 	httpClient "github.com/goslacker/slacker/core/httpx/client"
 	"github.com/goslacker/slacker/core/slicex"
 	"github.com/goslacker/slacker/sdk/ai/client/v1"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -54,7 +57,7 @@ func (c *Client) buildUri(uri string) string {
 }
 
 func (c *Client) prepareHttpClient(opt *client.ReqOptions) httpClient.Client {
-	httpClient := c.httpClient
+	httpClient := c.httpClient.Clone()
 	if len(opt.Header) > 0 {
 		for k, v := range opt.Header {
 			httpClient = httpClient.AddHeader(k, v...)
@@ -92,6 +95,38 @@ func (c *Client) RetrieveBatch(ctx context.Context, batchID string, opts ...func
 	}
 	resp = &RetrieveBatchResp{}
 	err = c.scanResp(response, resp)
+
+	return
+}
+
+func (c *Client) RetrieveBatchResults(ctx context.Context, batchID string, opts ...func(*client.ReqOptions)) (resp []BatchResult, err error) {
+	opt := &client.ReqOptions{}
+	for _, o := range opts {
+		o(opt)
+	}
+	response, err := c.prepareHttpClient(opt).GetCtx(ctx, c.buildUri("messages/batches/"+batchID+"/results"))
+	if err != nil {
+		return
+	}
+	defer response.Body.Close()
+	if response.StatusCode > 400 {
+		r, _ := response.GetBody()
+		switch response.StatusCode {
+		case 429:
+			err = errx.Wrap(client.ErrRateLimit, errx.WithMsg(fmt.Sprintf("request claude <messages/batches> failed: %s", string(r))))
+		default:
+			err = errx.Wrap(fmt.Errorf("request claude <messages/batches> failed: %s", string(r)))
+		}
+		return
+	}
+	tmp, err := io.ReadAll(response.Body)
+	if err != nil {
+		return
+	}
+	resp, err = slicex.Map(bytes.Split(tmp, []byte("\n")), func(item []byte) (result BatchResult, err error) {
+		err = json.Unmarshal(item, &result)
+		return
+	})
 
 	return
 }
