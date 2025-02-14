@@ -3,10 +3,11 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"io"
 	"log/slog"
 	"net/http"
+
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
 
 type ResponseLogger struct {
@@ -48,7 +49,7 @@ func LogReqAndRespMiddleware(next runtime.HandlerFunc) runtime.HandlerFunc {
 			var b map[string]any
 			err = json.Unmarshal(reqBody, &b)
 			if err != nil {
-				rMap["body"] = string(reqBody)
+				rMap["body"] = "<" + r.Header.Get("Content-Type") + ">"
 			} else {
 				rMap["body"] = b
 			}
@@ -62,7 +63,7 @@ func LogReqAndRespMiddleware(next runtime.HandlerFunc) runtime.HandlerFunc {
 			var b map[string]any
 			err = json.Unmarshal(w.(*ResponseLogger).Body, &b)
 			if err != nil {
-				respMap["body"] = string(w.(*ResponseLogger).Body)
+				rMap["body"] = "<" + w.Header().Get("Content-Type") + ">"
 			} else {
 				respMap["body"] = b
 			}
