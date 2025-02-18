@@ -12,6 +12,24 @@ func SimpleMap(dst any, src any) (err error) {
 	return SimpleMapValue(reflect.ValueOf(dst), reflect.ValueOf(src))
 }
 
+func tryClone(src reflect.Value) reflect.Value {
+	f := src.MethodByName("Clone")
+	if !f.IsValid() {
+		return src
+	}
+	results := f.Call([]reflect.Value{})
+	switch len(results) {
+	case 2:
+		if results[1].Interface() != nil {
+			if e, ok := results[1].Interface().(error); ok {
+				panic(e)
+			}
+			return reflect.Zero(results[0].Type())
+		}
+	}
+	return results[0]
+}
+
 func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
 	if src.IsZero() {
 		return
@@ -64,7 +82,7 @@ func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.Struct:
-		return StructValueToStruct(dst, src)
+		return StructValueToStruct(dst, tryClone(src))
 	case reflect.String:
 		return ValueToString(dst, src)
 	default:
@@ -135,10 +153,16 @@ func ValueToString(dst reflect.Value, src reflect.Value) (err error) {
 	src = reflectx.Indirect(src, false)
 	dst = reflectx.Indirect(dst, false)
 
-	tmp, err := json.Marshal(src.Interface())
-	if err != nil {
-		return
+	if s, ok := src.Interface().(fmt.Stringer); ok {
+		dst.SetString(s.String())
+	} else {
+		var tmp []byte
+		tmp, err = json.Marshal(src.Interface())
+		if err != nil {
+			return
+		}
+		dst.Set(reflect.ValueOf(string(tmp)))
 	}
-	dst.Set(reflect.ValueOf(string(tmp)))
+
 	return
 }

@@ -3,7 +3,9 @@ package tool
 import (
 	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
+	"unsafe"
 )
 
 func TestSimpleMap(t *testing.T) {
@@ -416,4 +418,76 @@ func BenchmarkCopier(b *testing.B) {
 			require.Equal(b, struct1.C, struct2.C)
 		}
 	})
+}
+
+type b struct {
+	A string
+}
+
+type c struct {
+	A d
+}
+
+type d struct {
+	D string
+}
+
+func (d d) String() string {
+	return d.D
+}
+
+func TestStringer(t *testing.T) {
+	c := c{A: d{D: "123"}}
+	var b b
+	err := SimpleMap(&b, c)
+	require.NoError(t, err)
+	require.Equal(t, "123", b.A)
+}
+
+type a struct {
+	A *string
+}
+
+func (aa *a) Clone() *a {
+	s := strings.Clone(*aa.A)
+	return &a{
+		A: &s,
+	}
+}
+
+type b2 struct {
+	A *string
+}
+
+func TestClone(t *testing.T) {
+	s := "123"
+	aa := a{
+		A: &s,
+	}
+	var b b2
+
+	err := SimpleMap(&b, aa)
+	require.NoError(t, err)
+	require.False(t, unsafe.StringData(s) == unsafe.StringData(*b.A))
+}
+
+type a2 struct {
+	A *a
+}
+
+type b3 struct {
+	A *a
+}
+
+func TestClone2(t *testing.T) {
+	s := "123"
+	a := a2{
+		A: &a{
+			A: &s,
+		},
+	}
+	var b b3
+	err := SimpleMap(&b, a)
+	require.NoError(t, err)
+	require.False(t, unsafe.StringData(s) == unsafe.StringData(*b.A.A))
 }
