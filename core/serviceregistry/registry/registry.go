@@ -16,7 +16,7 @@ type RegistryConfig struct {
 type ServiceRegistry interface {
 	Register(serviceName string) (err error)
 	Deregister() (err error)
-	Resolve(serviceName string) (addr string, err error)
+	Resolve(serviceName string) (addrs []string, err error)
 }
 
 var Registers = map[RegistryType]func(conf *RegistryConfig) (ServiceRegistry, error){}

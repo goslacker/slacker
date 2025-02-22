@@ -41,25 +41,52 @@ func (r *Registry) Register(serviceName string) (err error) {
 		return
 	}
 
-	_, err = r.c.Put(context.Background(), serviceName+"/"+strconv.FormatInt(int64(r.leaseID), 10), r.addr, clientv3.WithLease(leaseID))
+	key := serviceName + "/" + strconv.FormatInt(int64(r.leaseID), 10)
+
+	_, err = r.c.Put(context.Background(), key, r.addr, clientv3.WithLease(leaseID))
 	if err != nil {
 		return
 	}
 	slog.Info("register service success", "service", serviceName)
+
+	go r.watch(key, func() {
+		err := r.Register(serviceName)
+		if err != nil {
+			panic(fmt.Errorf("register service %s failed: %w", serviceName, err))
+		}
+	})
+
 	return
 }
 
-func (r *Registry) Resolve(serviceName string) (addr string, err error) {
+func (r *Registry) watch(key string, register func()) {
+	watcher := r.c.Watch(context.Background(), key, clientv3.WithPrefix())
+	for resp := range watcher {
+		if resp.CompactRevision > 0 {
+			register()
+			slog.Info("Service reregistered", "service", key)
+			return
+		}
+		for _, event := range resp.Events {
+			switch event.Type {
+			case clientv3.EventTypeDelete:
+				register()
+				slog.Info("Service reregistered", "service", string(event.Kv.Key))
+				return
+			}
+		}
+	}
+}
+
+func (r *Registry) Resolve(serviceName string) (addrs []string, err error) {
 	resp, err := r.c.Get(context.Background(), serviceName, clientv3.WithPrefix())
 	if err != nil {
 		return
 	}
 	for _, value := range resp.Kvs {
-		addr = string(value.Value)
+		addrs = append(addrs, string(value.Value))
 		break
 	}
-
-	//TODO: watch
 
 	return
 }

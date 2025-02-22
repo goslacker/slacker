@@ -36,17 +36,27 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
 	if !ipReg.MatchString(target) {
 		if conf.Registry != nil && *r.registryCache != nil {
-			target, err = (*r.registryCache).Resolve(target)
+			var addrs []string
+			addrs, err = (*r.registryCache).Resolve(target)
 			if err != nil {
 				r.cc.ReportError(fmt.Errorf("resolve service registry failed: %w", err))
 				return
 			}
+			addresses := make([]resolver.Address, 0, len(addrs))
+			for _, addr := range addrs {
+				addresses = append(addresses, resolver.Address{Addr: addr, ServerName: target})
+			}
+			fmt.Printf("%+v\n", addresses)
+			err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 		}
+	} else {
+		err = r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
+			{Addr: target},
+		}})
 	}
-
-	r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
-		{Addr: target},
-	}})
+	if err != nil {
+		r.cc.ReportError(err)
+	}
 }
 
 func (*etcdResolver) Close() {}
