@@ -46,7 +46,7 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 			for _, addr := range addrs {
 				addresses = append(addresses, resolver.Address{Addr: addr, ServerName: target})
 			}
-			fmt.Printf("%+v\n", addresses)
+			//fmt.Printf("%+v\n", addresses)
 			err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 		}
 	} else {
