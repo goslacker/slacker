@@ -3,9 +3,10 @@ package etcd
 import (
 	"context"
 	"fmt"
-	"github.com/goslacker/slacker/core/serviceregistry/registry"
 	"log/slog"
 	"strconv"
+
+	"github.com/goslacker/slacker/core/serviceregistry/registry"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
@@ -85,7 +86,6 @@ func (r *Registry) Resolve(serviceName string) (addrs []string, err error) {
 	}
 	for _, value := range resp.Kvs {
 		addrs = append(addrs, string(value.Value))
-		break
 	}
 
 	return

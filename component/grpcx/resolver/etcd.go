@@ -3,7 +3,6 @@ package resolver
 import (
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
 	"github.com/goslacker/slacker/core/trace"
@@ -75,15 +74,6 @@ func (e *EtcdResolverBuilder) Build(target resolver.Target, cc resolver.ClientCo
 		registryCache: e.RegistryCache,
 	}
 	r.ResolveNow(resolver.ResolveNowOptions{})
-	// 启动定期刷新
-	go func() {
-		ticker := time.NewTicker(time.Second * 10)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			r.ResolveNow(resolver.ResolveNowOptions{})
-		}
-	}()
 	return r, nil
 }
 func (*EtcdResolverBuilder) Scheme() string { return "" }
