@@ -2,7 +2,10 @@ package resolver
 
 import (
 	"fmt"
+	"log/slog"
+	"math/rand/v2"
 	"regexp"
+	"time"
 
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
 	"github.com/goslacker/slacker/core/trace"
@@ -25,6 +28,28 @@ type etcdResolver struct {
 	registryCache *registry.ServiceRegistry
 }
 
+func (r *etcdResolver) doResolveNow(target string) (err error) {
+	slog.Debug("resolve", "target", target)
+	addrs, err := (*r.registryCache).Resolve(target)
+	if err != nil {
+		err = fmt.Errorf("resolve service registry failed: %w", err)
+		r.cc.ReportError(err)
+		slog.Error("resolve failed", "error", err)
+		return
+	}
+	addresses := make([]resolver.Address, 0, len(addrs))
+	for _, addr := range addrs {
+		addresses = append(addresses, resolver.Address{Addr: addr, ServerName: target})
+	}
+	err = r.cc.UpdateState(resolver.State{Addresses: addresses})
+	if err != nil {
+		err = fmt.Errorf("resolve service registry failed: %w", err)
+		r.cc.ReportError(err)
+		slog.Error("resolve failed", "error", err, "addresses", addresses)
+	}
+	return
+}
+
 func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 	target := r.target.Endpoint()
 	var conf Config
@@ -37,18 +62,16 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
 	if !ipReg.MatchString(target) {
 		if conf.Registry != nil && *r.registryCache != nil {
-			var addrs []string
-			addrs, err = (*r.registryCache).Resolve(target)
+			err = r.doResolveNow(target)
 			if err != nil {
-				r.cc.ReportError(fmt.Errorf("resolve service registry failed: %w", err))
-				return
+				go func() {
+					for err != nil {
+						s := rand.IntN(10) + 1
+						time.Sleep(time.Second * time.Duration(s))
+						err = r.doResolveNow(target)
+					}
+				}()
 			}
-			addresses := make([]resolver.Address, 0, len(addrs))
-			for _, addr := range addrs {
-				addresses = append(addresses, resolver.Address{Addr: addr, ServerName: target})
-			}
-			//fmt.Printf("%+v\n", addresses)
-			err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 		}
 	} else {
 		err = r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
