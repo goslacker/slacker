@@ -29,7 +29,6 @@ type etcdResolver struct {
 }
 
 func (r *etcdResolver) doResolveNow(target string) (err error) {
-	slog.Debug("resolve", "target", target)
 	addrs, err := (*r.registryCache).Resolve(target)
 	if err != nil {
 		err = fmt.Errorf("resolve service registry failed: %w", err)

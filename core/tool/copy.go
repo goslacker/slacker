@@ -12,24 +12,6 @@ func SimpleMap(dst any, src any) (err error) {
 	return SimpleMapValue(reflect.ValueOf(dst), reflect.ValueOf(src))
 }
 
-func tryClone(src reflect.Value) reflect.Value {
-	f := src.MethodByName("Clone")
-	if !f.IsValid() {
-		return src
-	}
-	results := f.Call([]reflect.Value{})
-	switch len(results) {
-	case 2:
-		if results[1].Interface() != nil {
-			if e, ok := results[1].Interface().(error); ok {
-				panic(e)
-			}
-			return reflect.Zero(results[0].Type())
-		}
-	}
-	return results[0]
-}
-
 func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
 	if src.IsZero() {
 		return
@@ -54,7 +36,7 @@ func MapValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.String:
-		return ValueToString(dst, src)
+		return StructValueToString(dst, src)
 	default:
 		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
@@ -82,9 +64,9 @@ func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.Struct:
-		return StructValueToStruct(dst, tryClone(src))
+		return StructValueToStruct(dst, src)
 	case reflect.String:
-		return ValueToString(dst, src)
+		return StructValueToString(dst, src)
 	default:
 		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
@@ -127,7 +109,7 @@ func SliceValueTo(dst, src reflect.Value) (err error) {
 	case reflect.Slice:
 		return SliceValueToSlice(dst, src)
 	case reflect.String:
-		return ValueToString(dst, src)
+		return StructValueToString(dst, src)
 	default:
 		return fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 	}
@@ -149,7 +131,7 @@ func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
 	return
 }
 
-func ValueToString(dst reflect.Value, src reflect.Value) (err error) {
+func StructValueToString(dst reflect.Value, src reflect.Value) (err error) {
 	src = reflectx.Indirect(src, false)
 	dst = reflectx.Indirect(dst, false)
 
