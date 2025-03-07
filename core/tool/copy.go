@@ -135,8 +135,8 @@ func StructValueToString(dst reflect.Value, src reflect.Value) (err error) {
 	src = reflectx.Indirect(src, false)
 	dst = reflectx.Indirect(dst, false)
 
-	if s, ok := src.Interface().(fmt.Stringer); ok {
-		dst.SetString(s.String())
+	if s, ok := src.Interface().(interface{ MapToString() string }); ok {
+		dst.SetString(s.MapToString())
 	} else {
 		var tmp []byte
 		tmp, err = json.Marshal(src.Interface())
