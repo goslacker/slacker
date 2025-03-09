@@ -84,7 +84,11 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 			if !dstField.IsValid() {
 				err = StructValueToStruct(dst, srcField)
 			} else {
-				err = StructValueToStruct(dstField, srcField)
+				if dstField.Kind() == srcField.Kind() && dstField.Kind() != reflect.Pointer {
+					err = reflectx.SetValue(dst, src)
+				} else {
+					err = StructValueToStruct(dstField, srcField)
+				}
 			}
 			if err != nil {
 				return
