@@ -53,7 +53,7 @@ func (r *Registry) Register(serviceName string) (err error) {
 	go r.watch(key, func() {
 		err := r.Register(serviceName)
 		if err != nil {
-			panic(fmt.Errorf("register service %s failed: %w", serviceName, err))
+			slog.Error("register service failed", "service", serviceName, "err", err)
 		}
 	})
 
