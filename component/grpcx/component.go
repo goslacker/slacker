@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"strings"
 
@@ -101,6 +102,8 @@ func (c *Component) Start() {
 	c.grpcServer = grpc.NewServer(
 		grpc.ChainUnaryInterceptor(c.unaryServerInterceptors...),
 		grpc.ChainStreamInterceptor(c.streamServerInterceptors...),
+		grpc.MaxRecvMsgSize(math.MaxInt32),
+		grpc.MaxSendMsgSize(math.MaxInt32),
 	)
 
 	for _, register := range c.registers {

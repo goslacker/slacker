@@ -6,6 +6,7 @@ import (
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"math"
 )
 
 // registryCache client用来查询服务
@@ -41,6 +42,7 @@ func NewClient[T any](target string, provider func(cc grpc.ClientConnInterface) 
 	}
 
 	opts = append(opts, grpc.WithResolvers(&resolver.EtcdResolverBuilder{RegistryCache: &registryCache}))
+	opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32), grpc.MaxCallSendMsgSize(math.MaxInt32)))
 	cc, err := grpc.NewClient(target, opts...)
 	if err != nil {
 		return
