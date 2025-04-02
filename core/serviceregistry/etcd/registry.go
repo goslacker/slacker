@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"strconv"
 	"time"
 
@@ -52,7 +53,8 @@ func (r *Registry) Register(serviceName string) (err error) {
 	slog.Info("register service success", "service", serviceName)
 
 	go r.watch(key, func() {
-		time.Sleep(5 * time.Second)
+		sec := rand.IntN(5) + 1
+		time.Sleep(time.Duration(sec) * time.Second)
 		err := r.Register(serviceName)
 		if err != nil {
 			slog.Error("register service failed", "service", serviceName, "err", err)
