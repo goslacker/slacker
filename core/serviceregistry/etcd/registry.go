@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
 
@@ -51,6 +52,7 @@ func (r *Registry) Register(serviceName string) (err error) {
 	slog.Info("register service success", "service", serviceName)
 
 	go r.watch(key, func() {
+		time.Sleep(5 * time.Second)
 		err := r.Register(serviceName)
 		if err != nil {
 			slog.Error("register service failed", "service", serviceName, "err", err)
