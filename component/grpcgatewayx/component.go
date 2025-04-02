@@ -6,6 +6,7 @@ import (
 	"github.com/goslacker/slacker/component/grpcgatewayx/annotator"
 	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
 	"log/slog"
+	"math"
 	"net/http"
 	"strings"
 
@@ -103,7 +104,11 @@ func (c *Component) Start() {
 	ctx, c.cancel = context.WithCancel(context.Background())
 
 	endpoint := conf.GetString("endpoint")
-	conn, err := grpc.NewClient(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		endpoint,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32), grpc.MaxCallSendMsgSize(math.MaxInt32)),
+	)
 	if err != nil {
 		slog.Error("Failed to dial server", "err", err)
 		return
