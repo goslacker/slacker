@@ -42,7 +42,7 @@ func (r *etcdResolver) doResolveNow(target string) (err error) {
 	}
 	err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 	if err != nil {
-		err = fmt.Errorf("resolve service registry failed: %w", err)
+		err = fmt.Errorf("resolve service <%s> failed: %w", target, err)
 		r.cc.ReportError(err)
 		slog.Error("resolve failed", "error", err, "addresses", addresses)
 	}
