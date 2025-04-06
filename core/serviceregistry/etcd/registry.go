@@ -117,12 +117,14 @@ func (r *Registry) getLeaseID(force bool) (leaseID clientv3.LeaseID, err error) 
 			return
 		}
 		r.leaseID = resp.ID
-		ch, err := r.c.KeepAlive(context.Background(), r.leaseID)
+		ctx, cancel := context.WithCancel(context.Background())
+		ch, err := r.c.KeepAlive(ctx, r.leaseID)
 		if err != nil {
 			r.c.Revoke(context.Background(), r.leaseID)
 			return 0, fmt.Errorf("keep alive failed: %w", err)
 		}
 		go func() {
+			defer cancel()
 			for range ch {
 				// slog.Debug("keep alive success", "response", resp)
 			}
