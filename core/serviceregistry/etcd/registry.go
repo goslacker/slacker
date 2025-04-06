@@ -65,11 +65,13 @@ func (r *Registry) Register(serviceName string) (err error) {
 }
 
 func (r *Registry) watch(key string, register func()) {
-	watcher := r.c.Watch(context.Background(), key, clientv3.WithPrefix())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	watcher := r.c.Watch(ctx, key, clientv3.WithPrefix())
 	for resp := range watcher {
 		if resp.CompactRevision > 0 {
-			register()
-			slog.Info("Service reregistered", "service", key)
+			slog.Info("rewatch key", "key", key)
+			go r.watch(key, register)
 			return
 		}
 		for _, event := range resp.Events {
@@ -126,7 +128,7 @@ func (r *Registry) getLeaseID(force bool) (leaseID clientv3.LeaseID, err error) 
 			}
 			sec := rand.IntN(5) + 1
 			time.Sleep(time.Duration(sec) * time.Second)
-			r.leaseID, err = r.getLeaseID(true)
+			_, err = r.getLeaseID(true)
 			if err != nil {
 				slog.Error("get lease id failed", "err", err)
 			}
