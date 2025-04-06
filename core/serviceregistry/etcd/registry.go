@@ -38,7 +38,7 @@ type Registry struct {
 }
 
 func (r *Registry) Register(serviceName string) (err error) {
-	leaseID, err := r.getLeaseID()
+	leaseID, err := r.getLeaseID(false)
 	if err != nil {
 		err = fmt.Errorf("get lease id failed: %w", err)
 		return
@@ -106,8 +106,8 @@ func (r *Registry) Deregister() (err error) {
 	return
 }
 
-func (r *Registry) getLeaseID() (leaseID clientv3.LeaseID, err error) {
-	if r.leaseID == 0 {
+func (r *Registry) getLeaseID(force bool) (leaseID clientv3.LeaseID, err error) {
+	if r.leaseID == 0 || force {
 		var resp *clientv3.LeaseGrantResponse
 		resp, err = r.c.Grant(context.Background(), 10)
 		if err != nil {
@@ -123,6 +123,12 @@ func (r *Registry) getLeaseID() (leaseID clientv3.LeaseID, err error) {
 		go func() {
 			for range ch {
 				// slog.Debug("keep alive success", "response", resp)
+			}
+			sec := rand.IntN(5) + 1
+			time.Sleep(time.Duration(sec) * time.Second)
+			r.leaseID, err = r.getLeaseID(true)
+			if err != nil {
+				slog.Error("get lease id failed", "err", err)
 			}
 		}()
 	}
