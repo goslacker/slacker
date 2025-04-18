@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/goslacker/slacker/component/grpcgatewayx/annotator"
 	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
+	"google.golang.org/grpc/metadata"
 	"log/slog"
 	"math"
 	"net/http"
@@ -32,7 +33,8 @@ func WithRegisters(registers ...func(ctx context.Context, mux *runtime.ServeMux,
 
 func NewComponent(opts ...func(*Component)) *Component {
 	c := &Component{
-		handlers: make(map[string]runtime.HandlerFunc),
+		handlers:     make(map[string]runtime.HandlerFunc),
+		metadataFunc: []func(context.Context, *http.Request) metadata.MD{annotator.PassAuthResult},
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -67,6 +69,7 @@ type Component struct {
 	forwardResponseRewriter runtime.ForwardResponseRewriter
 	errorHandler            runtime.ErrorHandlerFunc
 	middleware              []runtime.Middleware
+	metadataFunc            []func(context.Context, *http.Request) metadata.MD
 }
 
 func (c *Component) SetForwardResponseRewriter(f runtime.ForwardResponseRewriter) {
@@ -87,6 +90,10 @@ func (c *Component) RegisterCustomerHandler(method string, path string, handler 
 
 func (c *Component) RegisterMiddleware(m ...runtime.Middleware) {
 	c.middleware = append(c.middleware, m...)
+}
+
+func (c *Component) RegisterMetadataFunc(m ...func(context.Context, *http.Request) metadata.MD) {
+	c.metadataFunc = append(c.metadataFunc, m...)
 }
 
 func (c *Component) Init() error {
@@ -154,7 +161,19 @@ func (c *Component) Start() {
 		authMiddleware.Build,
 	}, c.middleware...)
 	options = append(options, runtime.WithMiddlewares(middlewares...))
-	options = append(options, runtime.WithMetadata(annotator.PassAuthResult))
+	options = append(options, runtime.WithMetadata(func(ctx context.Context, request *http.Request) metadata.MD {
+		result := make(metadata.MD)
+		for _, v := range c.metadataFunc {
+			md := v(ctx, request)
+			if md == nil {
+				continue
+			}
+			for k, v := range md {
+				result[k] = v
+			}
+		}
+		return result
+	}))
 	mux := runtime.NewServeMux(options...)
 	for _, register := range c.registers {
 		err := register(ctx, mux, conn)
