@@ -72,15 +72,6 @@ func Wrap(err error, opt ...func(*Error)) error {
 	return e
 }
 
-//type Error struct {
-//	message string
-//	err     error
-//	line    int
-//	file    string
-//
-//	detail map[string]any
-//}
-
 type Error struct {
 	Message string
 	err     error

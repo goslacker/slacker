@@ -66,6 +66,7 @@ type Component struct {
 	gwServer                *http.Server
 	forwardResponseRewriter runtime.ForwardResponseRewriter
 	errorHandler            runtime.ErrorHandlerFunc
+	middleware              []runtime.Middleware
 }
 
 func (c *Component) SetForwardResponseRewriter(f runtime.ForwardResponseRewriter) {
@@ -82,6 +83,10 @@ func (c *Component) Register(registers ...func(ctx context.Context, mux *runtime
 
 func (c *Component) RegisterCustomerHandler(method string, path string, handler runtime.HandlerFunc) {
 	c.handlers[fmt.Sprintf("%s|%s", method, path)] = handler
+}
+
+func (c *Component) RegisterMiddleware(m ...runtime.Middleware) {
+	c.middleware = append(c.middleware, m...)
 }
 
 func (c *Component) Init() error {
@@ -143,7 +148,12 @@ func (c *Component) Start() {
 	if err != nil {
 		return
 	}
-	options = append(options, runtime.WithMiddlewares(middleware.LogReqAndRespMiddleware, authMiddleware.Build))
+
+	middlewares := append([]runtime.Middleware{
+		/*middleware.LogReqAndRespMiddleware, */
+		authMiddleware.Build,
+	}, c.middleware...)
+	options = append(options, runtime.WithMiddlewares(middlewares...))
 	options = append(options, runtime.WithMetadata(annotator.PassAuthResult))
 	mux := runtime.NewServeMux(options...)
 	for _, register := range c.registers {
