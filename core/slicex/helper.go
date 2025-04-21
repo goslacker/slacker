@@ -230,6 +230,7 @@ func Batch[S ~[]E, E comparable](s S, batch int, f func(piece S) error) (err err
 		if err != nil {
 			return
 		}
+		idx++
 	}
 	return
 }

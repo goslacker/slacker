@@ -70,6 +70,7 @@ type Component struct {
 	errorHandler            runtime.ErrorHandlerFunc
 	middleware              []runtime.Middleware
 	metadataFunc            []func(context.Context, *http.Request) metadata.MD
+	queryParser             runtime.QueryParameterParser
 }
 
 func (c *Component) SetForwardResponseRewriter(f runtime.ForwardResponseRewriter) {
@@ -78,6 +79,10 @@ func (c *Component) SetForwardResponseRewriter(f runtime.ForwardResponseRewriter
 
 func (c *Component) SetErrorHandler(f runtime.ErrorHandlerFunc) {
 	c.errorHandler = f
+}
+
+func (c *Component) SetQueryParser(p runtime.QueryParameterParser) {
+	c.queryParser = p
 }
 
 func (c *Component) Register(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
@@ -174,6 +179,9 @@ func (c *Component) Start() {
 		}
 		return result
 	}))
+	if c.queryParser != nil {
+		options = append(options, runtime.SetQueryParameterParser(c.queryParser))
+	}
 	mux := runtime.NewServeMux(options...)
 	for _, register := range c.registers {
 		err := register(ctx, mux, conn)
