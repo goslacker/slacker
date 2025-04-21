@@ -210,3 +210,26 @@ func Index[S ~[]E, E comparable](s S, v ...E) int {
 	}
 	return -1
 }
+
+func Batch[S ~[]E, E comparable](s S, batch int, f func(piece S) error) (err error) {
+	var idx int
+	for {
+		start := idx * batch
+		if start > len(s) {
+			break
+		}
+		end := start + batch
+		if end > len(s) {
+			end = len(s)
+		}
+		if start == end {
+			break
+		}
+
+		err = f(s[start:end])
+		if err != nil {
+			return
+		}
+	}
+	return
+}
