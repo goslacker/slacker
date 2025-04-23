@@ -180,7 +180,7 @@ func Filter[T any](s []T, f func(item T) bool) []T {
 }
 
 // ToMap convert a slice to a map, with specified key and value using the function.
-func ToMap[T any, K comparable, V any](s []T, f func(item T) (key K, value V)) map[K]V {
+func ToMap[S ~[]E, E comparable, K comparable, V any](s S, f func(item E) (key K, value V)) map[K]V {
 	m := make(map[K]V, len(s))
 	for _, item := range s {
 		key, value := f(item)
