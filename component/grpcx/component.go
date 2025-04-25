@@ -131,7 +131,7 @@ func (c *Component) Start() {
 	}
 
 	if conf.Registry != nil {
-		defer registerService(conf.Registry, addr, c.grpcServer)()
+		registerService(conf.Registry, addr, c.grpcServer)
 	}
 
 	var lis net.Listener
@@ -172,8 +172,7 @@ func (c *Component) detectAddr(oriAddr string) (realAddr string, err error) {
 	return
 }
 
-func registerService(config *registry.RegistryConfig, addr string, svr *grpc.Server) (deRegister func()) {
-	deRegister = func() {}
+func registerService(config *registry.RegistryConfig, addr string, svr *grpc.Server) {
 	if config == nil {
 		return
 	}
@@ -193,15 +192,6 @@ func registerService(config *registry.RegistryConfig, addr string, svr *grpc.Ser
 		err := r.Register(name)
 		if err != nil {
 			panic(fmt.Errorf("register service<%s> to registry failed: %w", name, err))
-		}
-	}
-
-	registryCache = r
-
-	deRegister = func() {
-		err = r.Deregister()
-		if err != nil {
-			slog.Warn("deregister service failed", "error", err)
 		}
 	}
 

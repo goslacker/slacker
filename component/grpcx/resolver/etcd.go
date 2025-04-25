@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"fmt"
+	"github.com/goslacker/slacker/core/serviceregistry"
 	"log/slog"
 	"math/rand/v2"
 	"regexp"
@@ -21,80 +22,79 @@ type Config struct {
 	Registry    *registry.RegistryConfig //服务注册中心配置
 }
 
-// etcdResolver 自定义name resolver，实现Resolver接口
-type etcdResolver struct {
-	target        resolver.Target
-	cc            resolver.ClientConn
-	registryCache *registry.ServiceRegistry
+func NewEtcdResolverV2(target resolver.Target, cc resolver.ClientConn) *etcdResolver {
+	r := &etcdResolver{
+		target: target,
+		cc:     cc,
+	}
+
+	var conf Config
+	err := viper.Sub("grpcx").Unmarshal(&conf)
+	if err != nil {
+		slog.Error("new registry failed", "error", err)
+		return nil
+	}
+	r.registry, err = serviceregistry.New(conf.Registry)
+	if err != nil {
+		slog.Error("new registry failed", "error", err)
+		return nil
+	}
+
+	return r
 }
 
-func (r *etcdResolver) doResolveNow(target string) (err error) {
-	addrs, err := (*r.registryCache).Resolve(target)
-	if err != nil {
-		err = fmt.Errorf("resolve service <%s> failed: %w", target, err)
-		r.cc.ReportError(err)
-		slog.Error("resolve failed", "error", err)
-		return
-	}
-	addresses := make([]resolver.Address, 0, len(addrs))
-	for _, addr := range addrs {
-		addresses = append(addresses, resolver.Address{Addr: addr, ServerName: target})
-	}
-	err = r.cc.UpdateState(resolver.State{Addresses: addresses})
-	if err != nil {
-		err = fmt.Errorf("resolve service <%s> failed: %w", target, err)
-		r.cc.ReportError(err)
-		slog.Error("resolve failed", "error", err, "addresses", addresses)
-	}
-	return
+type etcdResolver struct {
+	target   resolver.Target
+	cc       resolver.ClientConn
+	registry registry.ServiceRegistry
 }
 
 func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 	target := r.target.Endpoint()
-	var conf Config
-	err := viper.Sub("grpcx").Unmarshal(&conf)
-	if err != nil {
-		r.cc.ReportError(err)
-		return
-	}
 
 	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
 	if !ipReg.MatchString(target) {
-		if conf.Registry != nil && *r.registryCache != nil {
-			err = r.doResolveNow(target)
+		for {
+			addrs, err := r.registry.Resolve(target)
 			if err != nil {
-				go func() {
-					for err != nil {
-						s := rand.IntN(10) + 1
-						time.Sleep(time.Second * time.Duration(s))
-						err = r.doResolveNow(target)
-					}
-				}()
+				r.cc.ReportError(fmt.Errorf("resolve failed: %w", err))
+				slog.Error("resolve failed", "target", target, "error", err)
+			} else {
+				addresses := make([]resolver.Address, 0, len(addrs))
+				for _, addr := range addrs {
+					addresses = append(addresses, resolver.Address{Addr: addr, ServerName: target})
+				}
+				err = r.cc.UpdateState(resolver.State{Addresses: addresses})
+				if err != nil {
+					r.cc.ReportError(err)
+					slog.Error("update state failed", "target", target, "error", err)
+				} else {
+					break
+				}
 			}
+
+			s := rand.IntN(10) + 1
+			time.Sleep(time.Second * time.Duration(s))
 		}
 	} else {
-		err = r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
+		err := r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
 			{Addr: target},
 		}})
-	}
-	if err != nil {
-		r.cc.ReportError(err)
+		if err != nil {
+			r.cc.ReportError(err)
+		}
 	}
 }
 
-func (*etcdResolver) Close() {}
+func (r *etcdResolver) Close() {
+	r.registry.Close()
+}
 
 // EtcdResolverBuilder 需实现 Builder 接口
-type EtcdResolverBuilder struct {
-	RegistryCache *registry.ServiceRegistry
-}
+type EtcdResolverBuilder struct{}
 
 func (e *EtcdResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	r := &etcdResolver{
-		target:        target,
-		cc:            cc,
-		registryCache: e.RegistryCache,
-	}
+	r := NewEtcdResolverV2(target, cc)
 	r.ResolveNow(resolver.ResolveNowOptions{})
 	return r, nil
 }
