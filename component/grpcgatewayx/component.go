@@ -162,7 +162,7 @@ func (c *Component) Start() {
 	}
 
 	middlewares := append([]runtime.Middleware{
-		/*middleware.LogReqAndRespMiddleware, */
+		middleware.LogReqAndRespMiddleware,
 		authMiddleware.Build,
 	}, c.middleware...)
 	options = append(options, runtime.WithMiddlewares(middlewares...))
