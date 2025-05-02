@@ -71,6 +71,11 @@ type Component struct {
 	middleware              []runtime.Middleware
 	metadataFunc            []func(context.Context, *http.Request) metadata.MD
 	queryParser             runtime.QueryParameterParser
+	ignoreLogPaths          []string
+}
+
+func (c *Component) IgnoreLogPaths(paths ...string) {
+	c.ignoreLogPaths = append(c.ignoreLogPaths, paths...)
 }
 
 func (c *Component) SetForwardResponseRewriter(f runtime.ForwardResponseRewriter) {
@@ -162,7 +167,7 @@ func (c *Component) Start() {
 	}
 
 	middlewares := append([]runtime.Middleware{
-		middleware.LogReqAndRespMiddleware,
+		middleware.GenLogReqAndRespMiddleware(c.ignoreLogPaths),
 		authMiddleware.Build,
 	}, c.middleware...)
 	options = append(options, runtime.WithMiddlewares(middlewares...))
