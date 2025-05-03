@@ -25,8 +25,12 @@ func WithDetail(detail map[string]any) func(*ErrorOption) {
 	}
 }
 
-func Wrap(err error, message string) error {
-	return wrap(err, message, 1)
+func Wrap(err error, message ...string) error {
+	if len(message) == 0 {
+		return wrap(err, err.Error(), 1)
+	} else {
+		return wrap(err, message[0], 1)
+	}
 }
 
 func wrap(err error, message string, skip int) error {
