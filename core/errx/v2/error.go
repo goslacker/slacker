@@ -31,7 +31,9 @@ func Wrap(err error, message string) error {
 }
 
 func New(message string, opts ...func(*ErrorOption)) error {
-	option := &ErrorOption{}
+	option := &ErrorOption{
+		Detail: make(map[string]any),
+	}
 	for _, opt := range opts {
 		opt(option)
 	}
