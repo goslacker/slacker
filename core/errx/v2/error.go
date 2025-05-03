@@ -1,6 +1,7 @@
 package errx
 
 import (
+	"errors"
 	"fmt"
 	"github.com/goslacker/slacker/core/slogx"
 	"log/slog"
@@ -25,9 +26,25 @@ func WithDetail(detail map[string]any) func(*ErrorOption) {
 }
 
 func Wrap(err error, message string) error {
-	e := New(message, WithSkip(1))
+	return wrap(err, message, 1)
+}
+
+func wrap(err error, message string, skip int) error {
+	e := New(message, WithSkip(skip+1))
 	e.(*Error).err = err
 	return e
+}
+
+func Errorf(template string, args ...interface{}) error {
+	err := fmt.Errorf(template, args...)
+	msg := err.Error()
+	switch x := err.(type) {
+	case interface{ Unwrap() error }:
+		err = x.Unwrap()
+	case interface{ Unwrap() []error }:
+		err = errors.Join(x.Unwrap()...)
+	}
+	return wrap(err, msg, 1)
 }
 
 func New(message string, opts ...func(*ErrorOption)) error {
