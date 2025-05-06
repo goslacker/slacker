@@ -17,7 +17,7 @@ import (
 func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(*Repository[PO, Entity])) *Repository[PO, Entity] {
 	r := &Repository[PO, Entity]{
 		DB:  db,
-		ctx: context.Background(),
+		Ctx: context.Background(),
 		M2E: database.DefaultM2E[PO, Entity],
 		E2M: database.DefaultE2M[PO, Entity],
 	}
@@ -31,7 +31,7 @@ func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(*Repository[PO,
 
 type Repository[PO any, Entity any] struct {
 	DB  *gorm.DB
-	ctx context.Context
+	Ctx context.Context
 	M2E func(dst *Entity, src *PO) error
 	E2M func(dst *PO, src *Entity) error
 }
@@ -49,14 +49,14 @@ func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) *Repository[PO, En
 	if tx != nil {
 		return &Repository[PO, Entity]{
 			DB:  tx.(*gorm.DB).WithContext(ctx),
-			ctx: ctx,
+			Ctx: ctx,
 			M2E: r.M2E,
 			E2M: r.E2M,
 		}
 	}
 	return &Repository[PO, Entity]{
 		DB:  r.DB.WithContext(ctx),
-		ctx: ctx,
+		Ctx: ctx,
 		M2E: r.M2E,
 		E2M: r.E2M,
 	}
@@ -65,7 +65,7 @@ func (r *Repository[PO, Entity]) WithCtx(ctx context.Context) *Repository[PO, En
 func (r *Repository[PO, Entity]) WithLock() *Repository[PO, Entity] {
 	return &Repository[PO, Entity]{
 		DB:  r.DB.Clauses(clause.Locking{Strength: "UPDATE"}),
-		ctx: r.ctx,
+		Ctx: r.Ctx,
 		M2E: r.M2E,
 		E2M: r.E2M,
 	}
@@ -74,7 +74,7 @@ func (r *Repository[PO, Entity]) WithLock() *Repository[PO, Entity] {
 func (r *Repository[PO, Entity]) WithShareLock() *Repository[PO, Entity] {
 	return &Repository[PO, Entity]{
 		DB:  r.DB.Clauses(clause.Locking{Strength: "SHARE"}),
-		ctx: r.ctx,
+		Ctx: r.Ctx,
 		M2E: r.M2E,
 		E2M: r.E2M,
 	}
@@ -266,7 +266,7 @@ func (r *Repository[PO, Entity]) Pagination(page int, size int, conditions ...an
 }
 
 func (r *Repository[PO, Entity]) Transaction(f func(ctx context.Context) error) (err error) {
-	ctx := r.ctx
+	ctx := r.Ctx
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -279,7 +279,7 @@ func (r *Repository[PO, Entity]) Transaction(f func(ctx context.Context) error) 
 }
 
 func (r *Repository[PO, Entity]) Begin() (ctx context.Context) {
-	ctx = r.ctx
+	ctx = r.Ctx
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -357,9 +357,18 @@ func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context
 			}
 			list[idx] = &tmp
 		}
-		ctx := r.ctx
+		ctx := r.Ctx
 		if ctx == nil {
 			ctx = context.Background()
+		}
+		tx = tx.Session(&gorm.Session{})
+		tx.Statement = &gorm.Statement{
+			DB:        tx.Statement.DB,
+			ConnPool:  db.Statement.ConnPool,
+			Context:   db.Statement.Context,
+			Clauses:   map[string]clause.Clause{},
+			Vars:      make([]interface{}, 0, 8),
+			SkipHooks: db.Statement.SkipHooks,
 		}
 		ctx = context.WithValue(ctx, database.TxKey, tx)
 		return f(ctx, batch, list[:len(lst)])
