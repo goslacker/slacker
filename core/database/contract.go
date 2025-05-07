@@ -3,6 +3,7 @@ package database
 import "context"
 
 type Repository[Entity any] interface {
+	CreateBatch(batchSize int, entities ...*Entity) (err error)
 	Create(...*Entity) error
 	Update(entityOrMap any, conditions ...any) error
 	First(conditions ...any) (*Entity, error)

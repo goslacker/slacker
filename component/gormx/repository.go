@@ -80,6 +80,31 @@ func (r *Repository[PO, Entity]) WithShareLock() *Repository[PO, Entity] {
 	}
 }
 
+func (r *Repository[PO, Entity]) CreateBatch(batchSize int, entities ...*Entity) (err error) {
+	pos := make([]*PO, 0, len(entities))
+	for _, item := range entities {
+		po := new(PO)
+		err = r.E2M(po, item)
+		if err != nil {
+			return
+		}
+		pos = append(pos, po)
+	}
+
+	err = r.DB.CreateInBatches(&pos, batchSize).Error
+	if err != nil {
+		return
+	}
+
+	for index, item := range pos {
+		err = r.M2E(entities[index], item)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 func (r *Repository[PO, Entity]) Create(entities ...*Entity) (err error) {
 	pos := make([]*PO, 0, len(entities))
 	for _, item := range entities {
