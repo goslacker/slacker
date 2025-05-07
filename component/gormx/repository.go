@@ -386,12 +386,14 @@ func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context
 			}
 			list[idx] = &tmp
 		}
-		tx.Statement.Table = ""
-		tx.Statement.Model = nil
-		tx.Statement.Clauses = map[string]clause.Clause{}
-		tx.Statement.Selects = nil
-		tx.Statement.Joins = nil
-		tx.Statement.Preloads = nil
+		tx.Statement = &gorm.Statement{
+			DB:        tx.Statement.DB,
+			ConnPool:  db.Statement.ConnPool,
+			Context:   db.Statement.Context,
+			Clauses:   map[string]clause.Clause{},
+			Vars:      make([]interface{}, 0, 8),
+			SkipHooks: db.Statement.SkipHooks,
+		}
 		ctx := context.WithValue(context.Background(), database.TxKey, tx)
 		return f(ctx, batch, list[:len(lst)])
 	}).Error
