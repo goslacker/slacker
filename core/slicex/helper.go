@@ -215,7 +215,7 @@ func Batch[S ~[]E, E comparable](s S, batch int, f func(piece S) error) (err err
 	var idx int
 	for {
 		start := idx * batch
-		if start > len(s) {
+		if start >= len(s) {
 			break
 		}
 		end := start + batch
