@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"math"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"strings"
 
 	"github.com/goslacker/slacker/component/grpcx/interceptor"
@@ -50,6 +52,7 @@ type Component struct {
 	unaryServerInterceptors  []grpc.UnaryServerInterceptor
 	streamServerInterceptors []grpc.StreamServerInterceptor
 	registers                []func(grpc.ServiceRegistrar)
+	pprofPort                int
 }
 
 func (c *Component) Init() (err error) {
@@ -72,6 +75,10 @@ func (c *Component) RegisterUnaryInterceptor(interceptors ...grpc.UnaryServerInt
 
 func (c *Component) RegisterStreamInterceptor(interceptors ...grpc.StreamServerInterceptor) {
 	c.streamServerInterceptors = append(c.streamServerInterceptors, interceptors...)
+}
+
+func (c *Component) PprofPort(port int) {
+	c.pprofPort = port
 }
 
 func (c *Component) Register(registers ...func(grpc.ServiceRegistrar)) {
@@ -132,6 +139,16 @@ func (c *Component) Start() {
 
 	if conf.Registry != nil {
 		registerService(conf.Registry, addr, c.grpcServer)
+	}
+
+	if c.pprofPort > 0 {
+		go func() {
+			err = http.ListenAndServe(fmt.Sprintf(":%d", c.pprofPort), nil)
+
+			if err != nil {
+				slog.Error("pprof start failed", "error", err)
+			}
+		}()
 	}
 
 	var lis net.Listener
