@@ -141,6 +141,10 @@ func (r *Repository[PO, Entity]) CreateOr(onConflict clause.OnConflict, entities
 		pos = append(pos, po)
 	}
 
+	db := r.DB
+	if r.Ctx != nil {
+		db.WithContext(r.Ctx)
+	}
 	err = r.DB.Clauses(onConflict).Create(&pos).Error
 	if err != nil {
 		return
@@ -382,18 +386,13 @@ func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context
 			}
 			list[idx] = &tmp
 		}
-		ctx := r.Ctx
-		if ctx == nil {
-			ctx = context.Background()
-		}
-		tx = tx.Session(&gorm.Session{})
 		tx.Statement.Table = ""
 		tx.Statement.Model = nil
 		tx.Statement.Clauses = map[string]clause.Clause{}
 		tx.Statement.Selects = nil
 		tx.Statement.Joins = nil
 		tx.Statement.Preloads = nil
-		ctx = context.WithValue(ctx, database.TxKey, tx)
+		ctx := context.WithValue(context.Background(), database.TxKey, tx)
 		return f(ctx, batch, list[:len(lst)])
 	}).Error
 }
