@@ -386,6 +386,10 @@ func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context
 			}
 			list[idx] = &tmp
 		}
+		ctx := r.Ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
 		tx = tx.Session(&gorm.Session{})
 		tx.Statement = &gorm.Statement{
 			DB:        tx.Statement.DB,
@@ -395,7 +399,7 @@ func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context
 			Vars:      make([]interface{}, 0, 8),
 			SkipHooks: db.Statement.SkipHooks,
 		}
-		ctx := context.WithValue(context.Background(), database.TxKey, tx)
+		ctx = context.WithValue(ctx, database.TxKey, tx)
 		return f(ctx, batch, list[:len(lst)])
 	}).Error
 }
