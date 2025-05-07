@@ -386,6 +386,7 @@ func (r *Repository[PO, Entity]) Batch(batchSize int, f func(ctx context.Context
 			}
 			list[idx] = &tmp
 		}
+		tx = tx.Session(&gorm.Session{})
 		tx.Statement = &gorm.Statement{
 			DB:        tx.Statement.DB,
 			ConnPool:  db.Statement.ConnPool,
