@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"fmt"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/exp/maps"
@@ -69,20 +68,21 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 		for {
 			addrs, err = r.resolve(target)
 			if err != nil {
-				r.cc.ReportError(fmt.Errorf("resolve failed: %w", err))
-				slog.Error("resolve failed", "target", target, "error", err)
-			} else {
+				slog.Error("service resolve failed", "service", target, "error", err)
+			} else if len(addrs) > 0 {
 				err = r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrs)})
 				if err != nil {
-					r.cc.ReportError(err)
-					slog.Error("update state failed", "target", target, "error", err)
+					slog.Error("service update state failed", "service", target, "error", err)
 				} else {
 					break
 				}
+			} else {
+				slog.Warn("service not resolved", "service", target)
 			}
 
 			s := rand.IntN(10) + 1
 			time.Sleep(time.Second * time.Duration(s))
+			slog.Info("retry resolve", "service", target)
 		}
 		once.Do(func() {
 			go r.watch(target, addrs)
@@ -92,7 +92,7 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 			{Addr: target},
 		}})
 		if err != nil {
-			r.cc.ReportError(err)
+			slog.Error("service update state failed", "service", target, "error", err)
 		}
 	}
 }
@@ -141,6 +141,9 @@ func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address
 			r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
 		}
 	}
+	s := rand.IntN(10) + 1
+	time.Sleep(time.Second * time.Duration(s))
+	go r.watch(prefix, addrList)
 }
 
 // EtcdResolverBuilder 需实现 Builder 接口
