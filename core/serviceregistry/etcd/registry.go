@@ -38,7 +38,8 @@ type Registry struct {
 
 func (r *Registry) Register(serviceName string) (err error) {
 	var resp *clientv3.LeaseGrantResponse
-	resp, err = r.c.Grant(context.Background(), 10)
+	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
+	resp, err = r.c.Grant(ctx, 10)
 	if err != nil {
 		return fmt.Errorf("grant lease failed: %w", err)
 	}

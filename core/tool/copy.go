@@ -8,6 +8,21 @@ import (
 	"github.com/goslacker/slacker/core/reflectx"
 )
 
+// SimpleMapFuncBack 将src转换成dest处理后再转回来
+func SimpleMapFuncBack[S any, D any](src S, f func(dest D) (err error)) (err error) {
+	var dest D
+	err = SimpleMap(&dest, src)
+	if err != nil {
+		return
+	}
+	err = f(dest)
+	if err != nil {
+		return
+	}
+	err = SimpleMap(&src, dest)
+	return
+}
+
 func SimpleMap(dst any, src any) (err error) {
 	return SimpleMapValue(reflect.ValueOf(dst), reflect.ValueOf(src))
 }

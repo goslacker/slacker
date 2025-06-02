@@ -3,6 +3,7 @@ package registry
 type RegistryType string
 
 const (
+	None   RegistryType = ""
 	Consul RegistryType = "consul"
 	Etcd   RegistryType = "etcd"
 )
