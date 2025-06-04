@@ -143,6 +143,7 @@ func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address
 			r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
 		}
 	}
+	cancel()
 	s := rand.IntN(10) + 1
 	time.Sleep(time.Second * time.Duration(s))
 	go r.watch(prefix, addrList)
