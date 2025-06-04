@@ -116,7 +116,9 @@ func (r *etcdResolver) resolve(serviceName string) (addrs map[string]resolver.Ad
 
 func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address) {
 	slog.Debug("watch service", "prefix", prefix, "addrList", addrList)
-	rch := r.c.Watch(context.Background(), prefix, clientv3.WithPrefix())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	rch := r.c.Watch(ctx, prefix, clientv3.WithPrefix())
 	for n := range rch {
 		update := false
 		for _, ev := range n.Events {
