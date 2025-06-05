@@ -2,7 +2,9 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"go.etcd.io/etcd/api/v3/mvccpb"
+	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"golang.org/x/exp/maps"
 	"log/slog"
@@ -85,7 +87,7 @@ func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
 			slog.Info("retry resolve", "service", target)
 		}
 		once.Do(func() {
-			go r.watch(target, addrs)
+			go r.watch(target, addrs, 0)
 		})
 	} else {
 		err := r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
@@ -114,12 +116,39 @@ func (r *etcdResolver) resolve(serviceName string) (addrs map[string]resolver.Ad
 	return
 }
 
-func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address) {
+func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address, rev int64) {
 	slog.Debug("watch service", "prefix", prefix, "addrList", addrList)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	rch := r.c.Watch(ctx, prefix, clientv3.WithPrefix())
+	opts := []clientv3.OpOption{
+		clientv3.WithPrefix(),
+	}
+	if rev != 0 {
+		opts = append(opts, clientv3.WithRev(rev))
+	}
+	rch := r.c.Watch(ctx, prefix, opts...)
 	for n := range rch {
+		if n.Err() != nil {
+			cancel()
+			if errors.Is(n.Err(), rpctypes.ErrCompacted) {
+				slog.Debug("watch compacted, reload", "prefix", prefix)
+				resp, err := r.c.Get(context.Background(), prefix, clientv3.WithPrefix())
+				if err != nil {
+					slog.Error("get prefix failed", "service", prefix, "error", err)
+				}
+				maps.Clear(addrList)
+				for _, kv := range resp.Kvs {
+					addrList[string(kv.Key)] = resolver.Address{Addr: string(kv.Value)}
+				}
+				slog.Debug("update addrList", "addrList", addrList)
+				r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
+				rev = resp.Header.GetRevision()
+			} else {
+				slog.Error("watch service failed", "prefix", prefix, "error", n.Err())
+			}
+			break
+		}
+
 		update := false
 		for _, ev := range n.Events {
 			switch ev.Type {
@@ -146,7 +175,7 @@ func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address
 	cancel()
 	s := rand.IntN(10) + 1
 	time.Sleep(time.Second * time.Duration(s))
-	go r.watch(prefix, addrList)
+	go r.watch(prefix, addrList, rev)
 }
 
 // EtcdResolverBuilder 需实现 Builder 接口
