@@ -3,6 +3,7 @@ package resolver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/api/v3/v3rpc/rpctypes"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -10,7 +11,6 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/goslacker/slacker/core/serviceregistry/registry"
@@ -47,6 +47,15 @@ func NewEtcdResolver(target resolver.Target, cc resolver.ClientConn) *etcdResolv
 		return nil
 	}
 
+	shouldWatch, addrs, err := r.resolve(target.Endpoint())
+	if err != nil {
+		slog.Error("service resolve failed", "service", target.Endpoint(), "error", err)
+	}
+
+	if shouldWatch {
+		go r.watch(target.Endpoint(), addrs)
+	}
+
 	return r
 }
 
@@ -56,127 +65,99 @@ type etcdResolver struct {
 	c      *clientv3.Client
 }
 
-var once sync.Once
-
-func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {
-	target := r.target.Endpoint()
-
-	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
-	if !ipReg.MatchString(target) {
-		var (
-			addrs map[string]resolver.Address
-			err   error
-		)
-		for {
-			addrs, err = r.resolve(target)
-			if err != nil {
-				slog.Error("service resolve failed", "service", target, "error", err)
-			} else if len(addrs) > 0 {
-				err = r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrs)})
-				if err != nil {
-					slog.Error("service update state failed", "service", target, "error", err)
-				} else {
-					break
-				}
-			} else {
-				slog.Warn("service not resolved", "service", target)
-			}
-
-			s := rand.IntN(10) + 1
-			time.Sleep(time.Second * time.Duration(s))
-			slog.Info("retry resolve", "service", target)
-		}
-		once.Do(func() {
-			go r.watch(target, addrs, 0)
-		})
-	} else {
-		err := r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
-			{Addr: target},
-		}})
-		if err != nil {
-			slog.Error("service update state failed", "service", target, "error", err)
-		}
-	}
-}
+func (r *etcdResolver) ResolveNow(o resolver.ResolveNowOptions) {}
 
 func (r *etcdResolver) Close() {
 	r.c.Close()
 }
 
-func (r *etcdResolver) resolve(serviceName string) (addrs map[string]resolver.Address, err error) {
-	resp, err := r.c.Get(context.Background(), serviceName, clientv3.WithPrefix())
-	if err != nil {
-		return
+func (r *etcdResolver) resolve(target string) (shouldWatch bool, addrs map[string]resolver.Address, err error) {
+	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	if !ipReg.MatchString(target) {
+		var resp *clientv3.GetResponse
+		resp, err = r.c.Get(ctx, target, clientv3.WithPrefix())
+		if err != nil {
+			err = fmt.Errorf("service resolve failed: %w(service=%s)", err, target)
+			return
+		}
+		addrs = make(map[string]resolver.Address, len(resp.Kvs))
+		for _, value := range resp.Kvs {
+			addrs[string(value.Key)] = resolver.Address{Addr: string(value.Value)}
+		}
+		err = r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrs)})
+		if err != nil {
+			err = fmt.Errorf("service update state failed: %w(service=%s)", err, target)
+			return
+		}
+		shouldWatch = true
+	} else {
+		err = r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
+			{Addr: target},
+		}})
+		if err != nil {
+			err = fmt.Errorf("service update state failed: %w(service=%s)", err, target)
+			return
+		}
 	}
-	addrs = make(map[string]resolver.Address, len(resp.Kvs))
-	for _, value := range resp.Kvs {
-		addrs[string(value.Key)] = resolver.Address{Addr: string(value.Value)}
-	}
-
 	return
 }
 
-func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address, rev int64) {
-	slog.Debug("watch service", "prefix", prefix, "addrList", addrList)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	opts := []clientv3.OpOption{
-		clientv3.WithPrefix(),
-	}
-	if rev != 0 {
-		opts = append(opts, clientv3.WithRev(rev))
-	}
-	rch := r.c.Watch(ctx, prefix, opts...)
-	for n := range rch {
-		if n.Err() != nil {
-			cancel()
-			if errors.Is(n.Err(), rpctypes.ErrCompacted) {
-				slog.Debug("watch compacted, reload", "prefix", prefix)
-				resp, err := r.c.Get(context.Background(), prefix, clientv3.WithPrefix())
-				if err != nil {
-					slog.Error("get prefix failed", "service", prefix, "error", err)
-				} else {
-					maps.Clear(addrList)
-					for _, kv := range resp.Kvs {
-						addrList[string(kv.Key)] = resolver.Address{Addr: string(kv.Value)}
+func (r *etcdResolver) watch(prefix string, addrs map[string]resolver.Address) {
+	for {
+		slog.Debug("watch service", "prefix", prefix, "addrs", addrs)
+		ctx, cancel := context.WithCancel(context.Background())
+		opts := []clientv3.OpOption{
+			clientv3.WithPrefix(),
+		}
+		rch := r.c.Watch(ctx, prefix, opts...)
+		for n := range rch {
+			if n.Err() != nil {
+				cancel()
+				if errors.Is(n.Err(), rpctypes.ErrCompacted) {
+					slog.Debug("watch compacted, reload", "prefix", prefix)
+					var err error
+					_, addrs, err = r.resolve(prefix)
+					if err != nil {
+						slog.Error("service resolve failed", "service", prefix, "error", err)
 					}
-					slog.Debug("update addrList", "addrList", addrList)
-					r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
-					rev = resp.Header.GetRevision()
+				} else {
+					slog.Error("watch service failed", "prefix", prefix, "error", n.Err())
 				}
-			} else {
-				slog.Error("watch service failed", "prefix", prefix, "error", n.Err())
+				break
 			}
-			break
-		}
 
-		update := false
-		for _, ev := range n.Events {
-			switch ev.Type {
-			case mvccpb.PUT:
-				slog.Debug("receive put", "key", string(ev.Kv.Key), "value", string(ev.Kv.Value))
-				if _, ok := addrList[string(ev.Kv.Key)]; !ok {
-					addrList[string(ev.Kv.Key)] = resolver.Address{Addr: string(ev.Kv.Value)}
-					update = true
-				}
-			case mvccpb.DELETE:
-				slog.Debug("receive delete", "key", string(ev.Kv.Key), "value", string(ev.Kv.Value))
-				if _, ok := addrList[string(ev.Kv.Key)]; ok {
-					delete(addrList, string(ev.Kv.Key))
-					update = true
+			update := false
+			for _, ev := range n.Events {
+				switch ev.Type {
+				case mvccpb.PUT:
+					slog.Debug("receive put", "key", string(ev.Kv.Key), "value", string(ev.Kv.Value))
+					if _, ok := addrs[string(ev.Kv.Key)]; !ok {
+						addrs[string(ev.Kv.Key)] = resolver.Address{Addr: string(ev.Kv.Value)}
+						update = true
+					}
+				case mvccpb.DELETE:
+					slog.Debug("receive delete", "key", string(ev.Kv.Key), "value", string(ev.Kv.Value))
+					if _, ok := addrs[string(ev.Kv.Key)]; ok {
+						delete(addrs, string(ev.Kv.Key))
+						update = true
+					}
 				}
 			}
-		}
 
-		if update == true {
-			slog.Debug("update addrList", "addrList", addrList)
-			r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
+			if update == true {
+				slog.Debug("update service state", "addrs", addrs)
+				err := r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrs)})
+				if err != nil {
+					slog.Error("update service state failed", "service", prefix, "error", err)
+				}
+			}
 		}
+		cancel()
+		s := rand.IntN(10) + 1
+		time.Sleep(time.Second * time.Duration(s))
 	}
-	cancel()
-	s := rand.IntN(10) + 1
-	time.Sleep(time.Second * time.Duration(s))
-	go r.watch(prefix, addrList, rev)
 }
 
 // EtcdResolverBuilder 需实现 Builder 接口
