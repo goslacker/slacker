@@ -135,14 +135,15 @@ func (r *etcdResolver) watch(prefix string, addrList map[string]resolver.Address
 				resp, err := r.c.Get(context.Background(), prefix, clientv3.WithPrefix())
 				if err != nil {
 					slog.Error("get prefix failed", "service", prefix, "error", err)
+				} else {
+					maps.Clear(addrList)
+					for _, kv := range resp.Kvs {
+						addrList[string(kv.Key)] = resolver.Address{Addr: string(kv.Value)}
+					}
+					slog.Debug("update addrList", "addrList", addrList)
+					r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
+					rev = resp.Header.GetRevision()
 				}
-				maps.Clear(addrList)
-				for _, kv := range resp.Kvs {
-					addrList[string(kv.Key)] = resolver.Address{Addr: string(kv.Value)}
-				}
-				slog.Debug("update addrList", "addrList", addrList)
-				r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrList)})
-				rev = resp.Header.GetRevision()
 			} else {
 				slog.Error("watch service failed", "prefix", prefix, "error", n.Err())
 			}
