@@ -47,10 +47,7 @@ func NewEtcdResolver(target resolver.Target, cc resolver.ClientConn) *etcdResolv
 		return nil
 	}
 
-	shouldWatch, addrs, rev, err := r.resolve(target.Endpoint())
-	if err != nil {
-		slog.Error("service resolve failed", "service", target.Endpoint(), "error", err)
-	}
+	shouldWatch, addrs, rev := r.resolve(target.Endpoint())
 
 	if shouldWatch {
 		go r.watch(target.Endpoint(), addrs, rev)
@@ -83,34 +80,40 @@ func (r *etcdResolver) Close() {
 	r.c.Close()
 }
 
-func (r *etcdResolver) resolve(target string) (shouldWatch bool, addrs map[string]resolver.Address, rev int64, err error) {
+func (r *etcdResolver) resolve(target string) (shouldWatch bool, addrs map[string]resolver.Address, rev int64) {
 	ipReg := regexp.MustCompile(`^\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}`)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	if !ipReg.MatchString(target) {
+		shouldWatch = true
 		var resp *clientv3.GetResponse
-		resp, err = r.c.Get(ctx, target, clientv3.WithPrefix())
+		resp, err := r.c.Get(ctx, target, clientv3.WithPrefix())
 		if err != nil {
-			err = fmt.Errorf("service resolve failed: %w(service=%s)", err, target)
+			slog.Error("service resolve failed", "service", target, "error", err)
 			return
 		}
+		rev = resp.Header.Revision
 		addrs = make(map[string]resolver.Address, len(resp.Kvs))
 		for _, value := range resp.Kvs {
 			addrs[string(value.Key)] = resolver.Address{Addr: string(value.Value)}
 		}
-		err = r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrs)})
-		if err != nil {
-			err = fmt.Errorf("service update state failed: %w(service=%s)", err, target)
+		addresses := maps.Values(addrs)
+		if len(addresses) > 0 {
+			err = r.cc.UpdateState(resolver.State{Addresses: maps.Values(addrs)})
+			if err != nil {
+				slog.Error("service resolve failed", "service", target, "error", err)
+				return
+			}
+		} else {
+			slog.Error("can not resolve service", "service", target)
 			return
 		}
-		shouldWatch = true
-		rev = resp.Header.Revision
 	} else {
-		err = r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
+		err := r.cc.UpdateState(resolver.State{Addresses: []resolver.Address{
 			{Addr: target},
 		}})
 		if err != nil {
-			err = fmt.Errorf("service update state failed: %w(service=%s)", err, target)
+			slog.Error("service update state failed", "service", target, "error", err)
 			return
 		}
 	}
@@ -131,7 +134,7 @@ func (r *etcdResolver) watch(prefix string, addrs map[string]resolver.Address, r
 		for n := range rch {
 			if n.Err() != nil {
 				if errors.Is(n.Err(), rpctypes.ErrCompacted) {
-					slog.Debug("watch compacted, reload", "prefix", prefix)
+					slog.Debug("watch compacted", "prefix", prefix)
 				} else {
 					slog.Error("watch service failed", "prefix", prefix, "error", n.Err())
 				}
@@ -176,7 +179,7 @@ func (r *etcdResolver) watch(prefix string, addrs map[string]resolver.Address, r
 			continue
 		}
 
-		_, addrs, rev, err = r.resolve(prefix)
+		_, addrs, rev = r.resolve(prefix)
 		if err != nil {
 			slog.Error("service resolve failed", "service", prefix, "error", err)
 		}
