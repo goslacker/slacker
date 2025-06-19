@@ -211,7 +211,7 @@ func Index[S ~[]E, E comparable](s S, v ...E) int {
 	return -1
 }
 
-var ErrExitBatch = errors.New("exit batch")
+var ExitBatch = errors.New("exit batch")
 
 func Batch[S ~[]E, E comparable](s S, batch int, f func(piece S) error) (err error) {
 	var idx int
@@ -230,7 +230,7 @@ func Batch[S ~[]E, E comparable](s S, batch int, f func(piece S) error) (err err
 
 		err = f(s[start:end])
 		if err != nil {
-			if errors.Is(err, ErrExitBatch) {
+			if errors.Is(err, ExitBatch) {
 				err = nil
 			}
 			return
