@@ -491,3 +491,17 @@ func TestClone2(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, unsafe.StringData(s) == unsafe.StringData(*b.A.A))
 }
+
+func TestClone3(t *testing.T) {
+	type Dest struct {
+		A string
+	}
+	type Src struct {
+		A string
+	}
+	var dest *Dest
+	src := Src{}
+	err := SimpleMap(&dest, &src)
+	require.NoError(t, err)
+	require.NotNil(t, dest)
+}
