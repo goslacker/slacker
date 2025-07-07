@@ -28,9 +28,9 @@ func SimpleMap(dst any, src any) (err error) {
 }
 
 func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
-	//if src.IsZero() {
-	//	return
-	//}
+	if src.IsZero() {
+		return
+	}
 	src = reflectx.Indirect(src, false)
 	switch src.Kind() {
 	case reflect.Struct:
