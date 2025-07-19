@@ -97,6 +97,7 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 		if srcFieldStruct.Anonymous {
 			dstField := dst.FieldByName(srcFieldStruct.Name)
 			if !dstField.CanSet() {
+				println(srcFieldStruct.Name, "can not set")
 				continue
 			}
 			if !dstField.IsValid() {
