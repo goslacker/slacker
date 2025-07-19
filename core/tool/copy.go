@@ -96,14 +96,14 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 		srcFieldStruct := src.Type().Field(i)
 		if srcFieldStruct.Anonymous {
 			dstField := dst.FieldByName(srcFieldStruct.Name)
-			if !dstField.CanSet() {
-				println(srcFieldStruct.Name, "can not set")
-				continue
-			}
 			if !dstField.IsValid() {
 				err = StructValueToStruct(dst, srcField)
 			} else {
 				if dstField.Kind() == srcField.Kind() && dstField.Kind() != reflect.Pointer {
+					if !dstField.CanSet() {
+						println(srcFieldStruct.Name, "can not set")
+						continue
+					}
 					err = reflectx.SetValue(dst, src)
 					if err != nil {
 						err = fmt.Errorf("SetValue failed: %w[srcFieldName=%s]", err, srcFieldStruct.Name)
