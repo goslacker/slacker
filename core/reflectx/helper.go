@@ -46,6 +46,9 @@ func SetValue(dstValue reflect.Value, srcValue reflect.Value) (err error) {
 		err = fmt.Errorf("type <%s> and <%s> are not same", dstValue.Type().String(), srcValue.Type().String())
 		return
 	}
+	if !dstValue.CanSet() {
+		return fmt.Errorf("cannot set value to %s", dstValue.Type().String())
+	}
 
 	dstValue.Set(srcValue)
 
