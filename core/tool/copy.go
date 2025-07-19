@@ -101,7 +101,6 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 			} else {
 				if dstField.Kind() == srcField.Kind() && dstField.Kind() != reflect.Pointer {
 					if !dstField.CanSet() {
-						println(srcFieldStruct.Name, "can not set")
 						continue
 					}
 					err = reflectx.SetValue(dst, src)
