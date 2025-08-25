@@ -144,14 +144,26 @@ func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
 	src = reflectx.Indirect(src, false)
 	dst = reflectx.Indirect(dst, false)
 	dstItemType := dst.Type().Elem()
-	dst.Set(reflect.MakeSlice(dst.Type(), 0, src.Len()))
+	if dst.IsNil() {
+		dst.Set(reflect.MakeSlice(dst.Type(), 0, src.Len()))
+	}
 	for i := 0; i < src.Len(); i++ {
-		dstItem := reflect.New(dstItemType)
-		err = SimpleMapValue(dstItem.Elem(), src.Index(i))
-		if err != nil {
-			return
+		var dstItem reflect.Value
+		if dst.Len()-1 >= i {
+			dstItem = dst.Index(i)
+			err = SimpleMapValue(dstItem.Elem(), src.Index(i))
+			if err != nil {
+				return
+			}
+		} else {
+			dstItem = reflect.New(dstItemType)
+			err = SimpleMapValue(dstItem.Elem(), src.Index(i))
+			if err != nil {
+				return
+			}
+			dst.Set(reflect.Append(dst, dstItem.Elem()))
 		}
-		dst.Set(reflect.Append(dst, dstItem.Elem()))
+
 	}
 	return
 }
