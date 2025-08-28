@@ -150,8 +150,8 @@ func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
 	for i := 0; i < src.Len(); i++ {
 		var dstItem reflect.Value
 		if dst.Len()-1 >= i {
-			dstItem = dst.Index(i)
-			err = SimpleMapValue(dstItem.Elem(), src.Index(i))
+			dstItem = reflectx.Indirect(dst.Index(i), false)
+			err = SimpleMapValue(dstItem, src.Index(i))
 			if err != nil {
 				return
 			}
