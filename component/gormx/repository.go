@@ -145,7 +145,7 @@ func (r *Repository[PO, Entity]) CreateOr(onConflict clause.OnConflict, entities
 	if r.Ctx != nil {
 		db.WithContext(r.Ctx)
 	}
-	err = r.DB.Clauses(onConflict).Create(&pos).Error
+	err = r.DB.Session(&gorm.Session{CreateBatchSize: 1000}).Clauses(onConflict).Create(&pos).Error
 	if err != nil {
 		return
 	}
@@ -265,7 +265,7 @@ func (r *Repository[PO, Entity]) PaginationByOffset(offset int, limit int, condi
 	}
 
 	var poList []PO
-	err = db.Offset(offset).Limit(limit).Find(&poList).Error
+	err = db.Debug().Offset(offset).Limit(limit).Find(&poList).Error
 	if err != nil {
 		return
 	}
