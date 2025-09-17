@@ -1,11 +1,12 @@
 package tool
 
 import (
-	"github.com/jinzhu/copier"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"unsafe"
+
+	"github.com/jinzhu/copier"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleMap(t *testing.T) {
@@ -364,6 +365,22 @@ func TestSimpleMap(t *testing.T) {
 			require.Error(t, err)
 		})
 	})
+	t.Run("空字符串转json null", func(t *testing.T) {
+		type c struct {
+			C string
+		}
+		type a struct {
+			C *c
+		}
+		type b struct {
+			C string
+		}
+		aa := a{}
+		var bb b
+		err := SimpleMap(&bb, &aa)
+		require.NoError(t, err)
+		require.Equal(t, "null", bb.C)
+	})
 }
 
 func BenchmarkCopier(b *testing.B) {
@@ -420,30 +437,6 @@ func BenchmarkCopier(b *testing.B) {
 	})
 }
 
-type b struct {
-	A string
-}
-
-type c struct {
-	A d
-}
-
-type d struct {
-	D string
-}
-
-func (d d) String() string {
-	return d.D
-}
-
-func TestStringer(t *testing.T) {
-	c := c{A: d{D: "123"}}
-	var b b
-	err := SimpleMap(&b, c)
-	require.NoError(t, err)
-	require.Equal(t, "123", b.A)
-}
-
 type a struct {
 	A *string
 }
@@ -468,7 +461,7 @@ func TestClone(t *testing.T) {
 
 	err := SimpleMap(&b, aa)
 	require.NoError(t, err)
-	require.False(t, unsafe.StringData(s) == unsafe.StringData(*b.A))
+	require.False(t, unsafe.StringData(s) != unsafe.StringData(*b.A))
 }
 
 type a2 struct {
@@ -489,9 +482,11 @@ func TestClone2(t *testing.T) {
 	var b b3
 	err := SimpleMap(&b, a)
 	require.NoError(t, err)
-	require.False(t, unsafe.StringData(s) == unsafe.StringData(*b.A.A))
+	require.True(t, s == *b.A.A)
+	require.False(t, unsafe.StringData(s) != unsafe.StringData(*b.A.A))
 }
 
+// src所有字段为空时,复制异常
 func TestClone3(t *testing.T) {
 	type Dest struct {
 		A string

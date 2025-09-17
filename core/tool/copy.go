@@ -28,12 +28,9 @@ func SimpleMap(dst any, src any) (err error) {
 }
 
 func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
-	if (src.Kind() != reflect.Struct && src.IsZero()) || !src.IsValid() {
-		return
-	}
 	src = reflectx.Indirect(src, false)
 	switch src.Kind() {
-	case reflect.Struct:
+	case reflect.Struct, reflect.Invalid:
 		return StructValueTo(dst, src)
 	case reflect.Slice:
 		return SliceValueTo(dst, src)
@@ -52,6 +49,8 @@ func MapValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	switch dst.Kind() {
 	case reflect.String:
 		return StructValueToString(dst, src)
+	case reflect.Map:
+		return MapValueToMap(dst, src)
 	default:
 		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
@@ -91,6 +90,9 @@ func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
 func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 	dst = reflectx.Indirect(dst, true)
 	src = reflectx.Indirect(src, false)
+	if !src.IsValid() {
+		return
+	}
 	for i := 0; i < src.NumField(); i++ {
 		srcField := src.Field(i)
 		srcFieldStruct := src.Type().Field(i)
@@ -103,7 +105,7 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 					if !dstField.CanSet() {
 						continue
 					}
-					err = reflectx.SetValue(dst, src)
+					err = reflectx.SetValue(dstField, srcField)
 					if err != nil {
 						err = fmt.Errorf("SetValue failed: %w[srcFieldName=%s]", err, srcFieldStruct.Name)
 					}
@@ -168,9 +170,25 @@ func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
 	return
 }
 
+func MapValueToMap(dst reflect.Value, src reflect.Value) (err error) {
+	dst = reflectx.Indirect(dst, true)
+	src = reflectx.Indirect(src, false)
+	if dst.IsNil() {
+		dst.Set(reflect.MakeMap(dst.Type()))
+	}
+	for _, key := range src.MapKeys() {
+		dst.SetMapIndex(key, src.MapIndex(key))
+	}
+	return
+}
+
 func StructValueToString(dst reflect.Value, src reflect.Value) (err error) {
 	src = reflectx.Indirect(src, false)
 	dst = reflectx.Indirect(dst, false)
+	if !src.IsValid() {
+		dst.SetString("null")
+		return
+	}
 
 	if s, ok := src.Interface().(interface{ MapToString() string }); ok {
 		dst.SetString(s.MapToString())

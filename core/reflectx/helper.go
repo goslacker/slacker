@@ -24,7 +24,7 @@ func IsKindValue(value reflect.Value, kind reflect.Kind) bool {
 func Indirect(v reflect.Value, fillZero bool) (ret reflect.Value) {
 	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
-			if fillZero && v.CanSet() {
+			if fillZero {
 				v.Set(reflect.New(v.Type().Elem()))
 			} else {
 				return
@@ -42,7 +42,7 @@ func SetValue(dstValue reflect.Value, srcValue reflect.Value) (err error) {
 	if srcValue.Type().ConvertibleTo(dstValue.Type()) {
 		srcValue = srcValue.Convert(dstValue.Type())
 	}
-	if dstValue.Type().Kind() != reflect.Interface && dstValue.Type() != srcValue.Type() {
+	if dstValue.Type().Kind() != reflect.Interface && dstValue.Type().String() != srcValue.Type().String() {
 		err = fmt.Errorf("type <%s> and <%s> are not same", dstValue.Type().String(), srcValue.Type().String())
 		return
 	}
