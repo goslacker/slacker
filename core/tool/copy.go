@@ -64,12 +64,27 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 		if _, ok := dst.Interface().([]byte); ok {
 			dst.SetBytes([]byte(src.String()))
 		} else {
-			json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+			if src.String() == "" {
+				return
+			}
+			err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+			if err != nil {
+				err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+			}
 		}
 	case reflect.Struct, reflect.Map:
-		json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+		if src.String() == "" {
+			return
+		}
+		err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+		if err != nil {
+			err = fmt.Errorf("string to struct/map json.Unmarshal failed: %w[src=%s]", err, src.String())
+		}
 	default:
-		reflectx.SetValue(dst, src)
+		err = reflectx.SetValue(dst, src)
+		if err != nil {
+			err = fmt.Errorf("set value directly failed: %w[src=%s]", err, src.String())
+		}
 	}
 	return
 }
