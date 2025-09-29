@@ -124,7 +124,6 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 			continue
 		}
 
-		println("22222222222222", srcFieldStruct.Name)
 		dstField := reflectx.FieldByNameCaseInsensitivity(dst, srcFieldStruct.Name)
 		if dstField.IsValid() {
 			err = SimpleMapValue(dstField, srcField)
@@ -154,10 +153,11 @@ func SliceValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 	if src.Type().Elem().Kind() != reflect.Uint8 {
 		return fmt.Errorf("slice2struct failed: unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 	}
-	err = json.Unmarshal(src.Bytes(), dst.Addr().Interface())
-	if err != nil {
-		println("111111111111", string(src.Bytes()), src.Bytes())
+	bytes := src.Bytes()
+	if len(bytes) == 0 {
+		return
 	}
+	err = json.Unmarshal(bytes, dst.Addr().Interface())
 	return
 }
 
