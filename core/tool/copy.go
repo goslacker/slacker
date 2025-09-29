@@ -124,6 +124,7 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 			continue
 		}
 
+		println("22222222222222", srcFieldStruct.Name)
 		dstField := reflectx.FieldByNameCaseInsensitivity(dst, srcFieldStruct.Name)
 		if dstField.IsValid() {
 			err = SimpleMapValue(dstField, srcField)
