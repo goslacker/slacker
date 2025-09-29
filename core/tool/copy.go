@@ -81,6 +81,8 @@ func StructValueTo(dst reflect.Value, src reflect.Value) (err error) {
 		return StructValueToStruct(dst, src)
 	case reflect.String:
 		return StructValueToString(dst, src)
+	case reflect.Slice:
+		return StructValueToSlice(dst, src)
 	default:
 		//err = fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 		return
@@ -151,7 +153,6 @@ func SliceValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 	if src.Type().Elem().Kind() != reflect.Uint8 {
 		return fmt.Errorf("slice2struct failed: unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 	}
-
 	err = json.Unmarshal(src.Bytes(), dst.Addr().Interface())
 	return
 }
@@ -193,6 +194,32 @@ func MapValueToMap(dst reflect.Value, src reflect.Value) (err error) {
 	for _, key := range src.MapKeys() {
 		dst.SetMapIndex(key, src.MapIndex(key))
 	}
+	return
+}
+
+func StructValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
+	src = reflectx.Indirect(src, false)
+	dst = reflectx.Indirect(dst, false)
+	if dst.Type().Elem().Kind() != reflect.Uint8 {
+		return fmt.Errorf("slice2struct failed: unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
+	}
+	if !src.IsValid() {
+		dst.Set(reflect.ValueOf([]byte("null")))
+		return
+	}
+
+	var result []byte
+	if s, ok := src.Interface().(interface{ MapToString() string }); ok {
+		result = []byte(s.MapToString())
+	} else {
+		var tmp []byte
+		tmp, err = json.Marshal(src.Interface())
+		if err != nil {
+			return
+		}
+		result = tmp
+	}
+	dst.Set(reflect.ValueOf(result))
 	return
 }
 
