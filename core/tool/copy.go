@@ -140,9 +140,20 @@ func SliceValueTo(dst, src reflect.Value) (err error) {
 		return SliceValueToSlice(dst, src)
 	case reflect.String:
 		return StructValueToString(dst, src)
+	case reflect.Struct:
+		return SliceValueToStruct(dst, src)
 	default:
 		return fmt.Errorf("unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 	}
+}
+
+func SliceValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
+	if src.Type().Elem().Kind() != reflect.Uint8 {
+		return fmt.Errorf("slice2struct failed: unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
+	}
+
+	err = json.Unmarshal(src.Bytes(), dst.Addr().Interface())
+	return
 }
 
 func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {

@@ -381,6 +381,24 @@ func TestSimpleMap(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "null", bb.C)
 	})
+	t.Run("[]byte类型json转struct", func(t *testing.T) {
+		type c struct {
+			C string `json:"c"`
+		}
+		type a struct {
+			C *c
+		}
+		type b struct {
+			C []byte
+		}
+		bb := b{
+			C: []byte(`{"c":"123"}`),
+		}
+		var aa a
+		err := SimpleMap(&aa, bb)
+		require.NoError(t, err)
+		require.Equal(t, "123", aa.C.C)
+	})
 }
 
 func BenchmarkCopier(b *testing.B) {
