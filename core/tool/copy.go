@@ -154,6 +154,9 @@ func SliceValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 		return fmt.Errorf("slice2struct failed: unsupported src type <%s> to dst type <%s>", src.Type().String(), dst.Type().String())
 	}
 	err = json.Unmarshal(src.Bytes(), dst.Addr().Interface())
+	if err != nil {
+		println("111111111111", string(src.Bytes()), src.Bytes())
+	}
 	return
 }
 
