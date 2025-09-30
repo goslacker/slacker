@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/goslacker/slacker/core/reflectx"
+	"github.com/tidwall/gjson"
 )
 
 // SimpleMapFuncBack 将src转换成dest处理后再转回来
@@ -67,10 +68,26 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 			if src.String() == "" {
 				return
 			}
-			err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
-			if err != nil {
-				err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+			r := gjson.Parse(src.String())
+			if r.IsArray() {
+				err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
+				if err != nil {
+					err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+				}
+				return
 			}
+
+			r = gjson.Parse("[" + src.String() + "]")
+			if r.IsArray() {
+				err = json.Unmarshal([]byte(r.String()), dst.Addr().Interface())
+				if err != nil {
+					err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+				}
+				return
+			}
+
+			err = fmt.Errorf("string to slice failed: %w[src=%s, dstType=%s]", err, src.String(), dst.Type().String())
+			return
 		}
 	case reflect.Struct, reflect.Map:
 		if src.String() == "" {
