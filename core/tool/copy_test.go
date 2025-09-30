@@ -473,6 +473,19 @@ func TestSimpleMap(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []uint64{1}, s2.A)
 	})
+	t.Run("逗号隔开的字符串转slice2", func(t *testing.T) {
+		type struct1 struct {
+			A string
+		}
+		type struct2 struct {
+			A []string
+		}
+		s1 := struct1{A: "呵呵,123"}
+		var s2 struct2
+		err := SimpleMap(&s2, s1)
+		require.NoError(t, err)
+		require.Equal(t, []string{"呵呵", "123"}, s2.A)
+	})
 }
 
 type PlanGroupEnd struct {

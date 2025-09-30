@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/goslacker/slacker/core/reflectx"
 	"github.com/tidwall/gjson"
@@ -77,16 +78,20 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 				return
 			}
 
-			r = gjson.Parse("[" + src.String() + "]")
-			if r.IsArray() {
-				err = json.Unmarshal([]byte(r.String()), dst.Addr().Interface())
+			if dst.Type().Elem().Kind() != reflect.String { //不是字符串切片, 不用加引号
+				err = json.Unmarshal([]byte("["+src.String()+"]"), dst.Addr().Interface())
 				if err != nil {
 					err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
 				}
 				return
 			}
 
-			err = fmt.Errorf("string to slice failed: %w[src=%s, dstType=%s]", err, src.String(), dst.Type().String())
+			s := strings.Join(strings.Split(src.String(), ","), `","`)
+			s = `["` + s + `"]`
+			err = json.Unmarshal([]byte(s), dst.Addr().Interface())
+			if err != nil {
+				err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+			}
 			return
 		}
 	case reflect.Struct, reflect.Map:
