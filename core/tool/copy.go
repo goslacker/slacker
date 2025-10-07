@@ -3,6 +3,7 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 
@@ -163,6 +164,7 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 
 		dstField := reflectx.FieldByNameCaseInsensitivity(dst, srcFieldStruct.Name)
 		if dstField.IsValid() {
+			slog.Debug("SimpleMapValue", "copyFieldName", srcFieldStruct.Name)
 			err = SimpleMapValue(dstField, srcField)
 			if err != nil {
 				return
