@@ -164,7 +164,7 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 
 		dstField := reflectx.FieldByNameCaseInsensitivity(dst, srcFieldStruct.Name)
 		if dstField.IsValid() {
-			slog.Debug("SimpleMapValue", "copyFieldName", srcFieldStruct.Name)
+			slog.Debug("SimpleMapValue", "copyFieldName", srcFieldStruct.Name, "srcFieldType", srcFieldStruct.Type.String(), "dstFieldType", dstField.Type().String())
 			err = SimpleMapValue(dstField, srcField)
 			if err != nil {
 				return
