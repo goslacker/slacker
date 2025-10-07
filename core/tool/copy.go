@@ -3,7 +3,6 @@ package tool
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"reflect"
 	"strings"
 
@@ -27,18 +26,18 @@ func SimpleMapFuncBack[S any, D any](src S, f func(dest D) (err error)) (err err
 }
 
 func SimpleMap(dst any, src any) (err error) {
-	return SimpleMapValue(reflect.ValueOf(dst), reflect.ValueOf(src))
+	return SimpleMapValue(reflect.ValueOf(dst), reflect.ValueOf(src), "root")
 }
 
-func SimpleMapValue(dst reflect.Value, src reflect.Value) (err error) {
+func SimpleMapValue(dst reflect.Value, src reflect.Value, fieldName string) (err error) {
 	src = reflectx.Indirect(src, false)
 	switch src.Kind() {
 	case reflect.Struct, reflect.Invalid:
 		return StructValueTo(dst, src)
 	case reflect.Slice:
-		return SliceValueTo(dst, src)
+		return SliceValueTo(dst, src, fieldName)
 	case reflect.String:
-		return StringValueTo(dst, src)
+		return StringValueTo(dst, src, fieldName)
 	case reflect.Map:
 		return MapValueTo(dst, src)
 	default:
@@ -60,7 +59,7 @@ func MapValueTo(dst reflect.Value, src reflect.Value) (err error) {
 	}
 }
 
-func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
+func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err error) {
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.Slice:
@@ -74,7 +73,7 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 			if r.IsArray() {
 				err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
 				if err != nil {
-					err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+					err = fmt.Errorf("1string to slice json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
 				}
 				return
 			}
@@ -82,16 +81,15 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 			if dst.Type().Elem().Kind() != reflect.String { //不是字符串切片, 不用加引号
 				err = json.Unmarshal([]byte("["+src.String()+"]"), dst.Addr().Interface())
 				if err != nil {
-					err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+					err = fmt.Errorf("2string to slice json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
 				}
 				return
 			}
 
-			s := strings.Join(strings.Split(src.String(), ","), `","`)
-			s = `["` + s + `"]`
-			err = json.Unmarshal([]byte(s), dst.Addr().Interface())
+			strSlice := strings.Split(src.String(), ",")
+			err = reflectx.SetValue(dst, reflect.ValueOf(strSlice))
 			if err != nil {
-				err = fmt.Errorf("string to slice json.Unmarshal failed: %w[src=%s]", err, src.String())
+				err = fmt.Errorf("2set value directly failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
 			}
 			return
 		}
@@ -101,12 +99,12 @@ func StringValueTo(dst reflect.Value, src reflect.Value) (err error) {
 		}
 		err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
 		if err != nil {
-			err = fmt.Errorf("string to struct/map json.Unmarshal failed: %w[src=%s]", err, src.String())
+			err = fmt.Errorf("string to struct/map json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
 		}
 	default:
 		err = reflectx.SetValue(dst, src)
 		if err != nil {
-			err = fmt.Errorf("set value directly failed: %w[src=%s]", err, src.String())
+			err = fmt.Errorf("1set value directly failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
 		}
 	}
 	return
@@ -164,8 +162,7 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 
 		dstField := reflectx.FieldByNameCaseInsensitivity(dst, srcFieldStruct.Name)
 		if dstField.IsValid() {
-			slog.Debug("SimpleMapValue", "copyFieldName", srcFieldStruct.Name, "srcFieldType", srcFieldStruct.Type.String(), "dstFieldType", dstField.Type().String())
-			err = SimpleMapValue(dstField, srcField)
+			err = SimpleMapValue(dstField, srcField, srcFieldStruct.Name)
 			if err != nil {
 				return
 			}
@@ -174,11 +171,11 @@ func StructValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 	return
 }
 
-func SliceValueTo(dst, src reflect.Value) (err error) {
+func SliceValueTo(dst, src reflect.Value, fieldName string) (err error) {
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.Slice:
-		return SliceValueToSlice(dst, src)
+		return SliceValueToSlice(dst, src, fieldName)
 	case reflect.String:
 		return StructValueToString(dst, src)
 	case reflect.Struct:
@@ -200,7 +197,7 @@ func SliceValueToStruct(dst reflect.Value, src reflect.Value) (err error) {
 	return
 }
 
-func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
+func SliceValueToSlice(dst reflect.Value, src reflect.Value, fieldName string) (err error) {
 	src = reflectx.Indirect(src, false)
 	dst = reflectx.Indirect(dst, false)
 	dstItemType := dst.Type().Elem()
@@ -211,13 +208,13 @@ func SliceValueToSlice(dst reflect.Value, src reflect.Value) (err error) {
 		var dstItem reflect.Value
 		if dst.Len()-1 >= i {
 			dstItem = reflectx.Indirect(dst.Index(i), false)
-			err = SimpleMapValue(dstItem, src.Index(i))
+			err = SimpleMapValue(dstItem, src.Index(i), fieldName)
 			if err != nil {
 				return
 			}
 		} else {
 			dstItem = reflect.New(dstItemType)
-			err = SimpleMapValue(dstItem.Elem(), src.Index(i))
+			err = SimpleMapValue(dstItem.Elem(), src.Index(i), fieldName)
 			if err != nil {
 				return
 			}
