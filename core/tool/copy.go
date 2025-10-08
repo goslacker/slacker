@@ -72,18 +72,16 @@ func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err 
 			r := gjson.Parse(src.String())
 			if r.IsArray() {
 				err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
-				if err != nil {
-					err = fmt.Errorf("1string to slice json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
+				if err == nil {
+					return
 				}
-				return
 			}
 
 			if dst.Type().Elem().Kind() != reflect.String { //不是字符串切片, 不用加引号
 				err = json.Unmarshal([]byte("["+src.String()+"]"), dst.Addr().Interface())
-				if err != nil {
-					err = fmt.Errorf("2string to slice json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
+				if err == nil {
+					return
 				}
-				return
 			}
 
 			strSlice := strings.Split(src.String(), ",")
