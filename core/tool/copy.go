@@ -60,15 +60,15 @@ func MapValueTo(dst reflect.Value, src reflect.Value) (err error) {
 }
 
 func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err error) {
+	if src.String() == "" || src.String() == "null" {
+		return
+	}
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.Slice:
 		if _, ok := dst.Interface().([]byte); ok {
 			dst.SetBytes([]byte(src.String()))
 		} else {
-			if src.String() == "" {
-				return
-			}
 			r := gjson.Parse(src.String())
 			if r.IsArray() {
 				err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
@@ -92,9 +92,6 @@ func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err 
 			return
 		}
 	case reflect.Struct, reflect.Map:
-		if src.String() == "" || src.String() == "null" {
-			return
-		}
 		err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
 		if err != nil {
 			err = fmt.Errorf("string to struct/map json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
