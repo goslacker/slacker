@@ -92,7 +92,7 @@ func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err 
 			return
 		}
 	case reflect.Struct, reflect.Map:
-		if src.String() == "" {
+		if src.String() == "" || src.String() == "null" {
 			return
 		}
 		err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
