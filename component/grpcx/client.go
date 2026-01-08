@@ -1,11 +1,12 @@
 package grpcx
 
 import (
+	"math"
+
 	"github.com/goslacker/slacker/component/grpcx/interceptor"
 	"github.com/goslacker/slacker/component/grpcx/resolver"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"math"
 )
 
 var unaryClientInterceptors = []grpc.UnaryClientInterceptor{
