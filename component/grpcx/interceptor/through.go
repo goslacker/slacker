@@ -2,11 +2,13 @@ package interceptor
 
 import (
 	"context"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
 func UnaryThroughClientInterceptor(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) (err error) {
+	println("121321321321321321321321321")
 	return invoker(through(ctx), method, req, reply, cc, opts...)
 }
 
