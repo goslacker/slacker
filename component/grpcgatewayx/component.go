@@ -3,13 +3,14 @@ package grpcgatewayx
 import (
 	"context"
 	"fmt"
-	"github.com/goslacker/slacker/component/grpcgatewayx/annotator"
-	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
-	"google.golang.org/grpc/metadata"
 	"log/slog"
 	"math"
 	"net/http"
 	"strings"
+
+	"github.com/goslacker/slacker/component/grpcgatewayx/annotator"
+	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
+	"google.golang.org/grpc/metadata"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -222,4 +223,11 @@ func (c *Component) Stop() {
 	if c.cancel != nil {
 		c.cancel()
 	}
+}
+
+func RegisterGateway(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
+	app.RegisterListener(func(event app.AfterInit) {
+		gateway := app.MustResolve[*Component]()
+		gateway.Register(registers...)
+	})
 }

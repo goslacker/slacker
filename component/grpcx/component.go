@@ -247,3 +247,13 @@ func traceAgent(conf *trace.TraceConfig, svr *grpc.Server, addr string) (provide
 func (c *Component) Stop() {
 	c.grpcServer.Stop()
 }
+
+func RegisterGrpcService(registers ...func(grpc.ServiceRegistrar)) {
+	app.RegisterListener(func(event app.AfterInit) {
+		app.MustResolve[*Component]().Register(func(sr grpc.ServiceRegistrar) {
+			for _, register := range registers {
+				register(sr)
+			}
+		})
+	})
+}
