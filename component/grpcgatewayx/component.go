@@ -231,3 +231,10 @@ func RegisterGateway(registers ...func(ctx context.Context, mux *runtime.ServeMu
 		gateway.Register(registers...)
 	})
 }
+
+func RegisterCustomerHandler(method string, path string, handler runtime.HandlerFunc) {
+	app.RegisterListener(func(event app.AfterInit) {
+		gateway := app.MustResolve[*Component]()
+		gateway.RegisterCustomerHandler(method, path, handler)
+	})
+}
