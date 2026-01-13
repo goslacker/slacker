@@ -499,6 +499,37 @@ func TestSimpleMap(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "呵呵,123", s2[0].A)
 	})
+	t.Run("nil转字符串", func(t *testing.T) {
+		type struct1 struct {
+			A []string
+		}
+		type struct2 struct {
+			A string
+		}
+		s1 := struct1{}
+		var s2 struct2
+		err := SimpleMap(&s2, s1)
+		require.NoError(t, err)
+		require.Equal(t, "null", s2.A)
+	})
+	t.Run("null字符串转slice", func(t *testing.T) {
+		type struct1 struct {
+			A []string
+		}
+		type struct2 struct {
+			A string
+		}
+		s2 := struct2{A: "null"}
+		var s1 struct1
+		err := SimpleMap(&s1, s2)
+		require.NoError(t, err)
+		require.Nil(t, s1.A)
+
+		s2 = struct2{A: ""}
+		err = SimpleMap(&s1, s2)
+		require.NoError(t, err)
+		require.Nil(t, s1.A)
+	})
 }
 
 type PlanGroupEnd struct {
