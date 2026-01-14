@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/goslacker/slacker/core/reflectx"
@@ -238,4 +239,17 @@ func Batch[S ~[]E, E comparable](s S, batch int, f func(piece S) error) (err err
 		idx++
 	}
 	return
+}
+
+// EqualIgnoreOrder 判断两个切片是否相等，忽略元素顺序
+func EqualIgnoreOrder[T comparable](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for _, item := range a {
+		if !slices.Contains(b, item) {
+			return false
+		}
+	}
+	return true
 }
