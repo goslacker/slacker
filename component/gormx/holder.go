@@ -4,12 +4,9 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/goslacker/slacker/core/database"
 	"gorm.io/gorm"
 )
-
-type txKey struct{}
-
-var TxKey = txKey{}
 
 type Holder interface {
 	WithContext(ctx context.Context) *DB
@@ -31,7 +28,7 @@ func (h *DB) GetDB() *gorm.DB {
 
 func (h *DB) WithContext(ctx context.Context) *DB {
 	// 从上下文中获取事务
-	tx, ok := ctx.Value(TxKey).(*gorm.DB)
+	tx, ok := ctx.Value(database.TxKey).(*gorm.DB)
 	if ok {
 		return &DB{ctx: ctx, DB: tx.WithContext(ctx)}
 	}
@@ -40,7 +37,7 @@ func (h *DB) WithContext(ctx context.Context) *DB {
 
 func (h *DB) Transaction(f func(ctx context.Context) error, opts ...*sql.TxOptions) error {
 	return h.DB.Transaction(func(tx *gorm.DB) error {
-		ctx := context.WithValue(h.ctx, TxKey, tx)
+		ctx := context.WithValue(h.ctx, database.TxKey, tx)
 		return f(ctx)
 	}, opts...)
 }
@@ -51,7 +48,7 @@ func (h *DB) Begin(opts ...*sql.TxOptions) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx := context.WithValue(h.ctx, TxKey, tx)
+	ctx := context.WithValue(h.ctx, database.TxKey, tx)
 	return ctx, tx.Error
 }
 
