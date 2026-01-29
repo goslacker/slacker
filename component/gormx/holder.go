@@ -13,8 +13,14 @@ type Holder interface {
 	GetDB() *gorm.DB
 }
 
-func NewHolder(db *gorm.DB) Holder {
-	return &DB{DB: db}
+var _ Holder = (*DB)(nil)
+var _ database.TxManager = (*DB)(nil)
+
+func NewHolder(db *gorm.DB) *DB {
+	return &DB{
+		DB:  db,
+		ctx: context.Background(),
+	}
 }
 
 type DB struct {
