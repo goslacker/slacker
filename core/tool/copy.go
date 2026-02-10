@@ -60,12 +60,15 @@ func MapValueTo(dst reflect.Value, src reflect.Value) (err error) {
 }
 
 func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err error) {
-	if src.String() == "" || src.String() == "null" {
+	if src.String() == "" {
 		return
 	}
 	dst = reflectx.Indirect(dst, true)
 	switch dst.Kind() {
 	case reflect.Slice:
+		if src.String() == "null" {
+			return
+		}
 		if _, ok := dst.Interface().([]byte); ok {
 			dst.SetBytes([]byte(src.String()))
 		} else {

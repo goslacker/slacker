@@ -530,6 +530,19 @@ func TestSimpleMap(t *testing.T) {
 		require.NoError(t, err)
 		require.Nil(t, s1.A)
 	})
+	t.Run("null字符串转字符串", func(t *testing.T) {
+		type struct1 struct {
+			A string
+		}
+		type struct2 struct {
+			A string
+		}
+		s2 := struct2{A: "null"}
+		var s1 struct1
+		err := SimpleMap(&s1, s2)
+		require.NoError(t, err)
+		require.Equal(t, "null", s1.A)
+	})
 }
 
 type PlanGroupEnd struct {
