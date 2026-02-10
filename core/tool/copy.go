@@ -63,12 +63,16 @@ func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err 
 	if src.String() == "" {
 		return
 	}
-	dst = reflectx.Indirect(dst, true)
-	switch dst.Kind() {
+	t := dst.Type()
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	switch t.Kind() {
 	case reflect.Slice:
 		if src.String() == "null" {
 			return
 		}
+		dst = reflectx.Indirect(dst, true)
 		if _, ok := dst.Interface().([]byte); ok {
 			dst.SetBytes([]byte(src.String()))
 		} else {
@@ -95,6 +99,10 @@ func StringValueTo(dst reflect.Value, src reflect.Value, fieldName string) (err 
 			return
 		}
 	case reflect.Struct, reflect.Map:
+		if src.String() == "null" {
+			return
+		}
+		dst = reflectx.Indirect(dst, true)
 		err = json.Unmarshal([]byte(src.String()), dst.Addr().Interface())
 		if err != nil {
 			err = fmt.Errorf("string to struct/map json.Unmarshal failed: %w[src=%s, fieldName=%s]", err, src.String(), fieldName)
