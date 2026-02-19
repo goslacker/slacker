@@ -200,7 +200,13 @@ func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan 
 	rch := e.c.Watch(ctx, service, opts...)
 	go func() {
 		defer close(addrsChan)
+	LOOP:
 		for res := range rch {
+			select {
+			case <-ctx.Done():
+				break LOOP
+			default:
+			}
 			if res.Err() != nil {
 				if errors.Is(res.Err(), rpctypes.ErrCompacted) {
 					slog.Debug("watch compacted", "service", service)
