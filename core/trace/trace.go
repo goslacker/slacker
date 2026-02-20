@@ -9,8 +9,8 @@ func init() {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }
 
-type traceType string
+type TraceType string
 
 const (
-	TraceTypeJaeger traceType = "jaeger"
+	TraceTypeJaeger TraceType = "jaeger"
 )

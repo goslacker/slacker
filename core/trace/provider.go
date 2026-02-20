@@ -15,7 +15,7 @@ import (
 )
 
 type TraceConfig struct {
-	Type     traceType
+	Type     TraceType
 	Endpoint string
 	Name     string
 	Addr     string
@@ -57,7 +57,7 @@ func NewTraceProvider(conf *TraceConfig) (tp *traceSdk.TracerProvider, err error
 	return
 }
 
-func BuildTraceProviders(typ traceType, endpoint string, serviceNames []string, addr string) (providers map[string]*traceSdk.TracerProvider, deferFunc func()) {
+func BuildTraceProviders(typ TraceType, endpoint string, serviceNames []string, addr string) (providers map[string]*traceSdk.TracerProvider, deferFunc func()) {
 	deferFunc = func() {}
 	if typ == "" || endpoint == "" || len(serviceNames) == 0 || addr == "" {
 		return
@@ -92,7 +92,7 @@ func BuildTraceProviders(typ traceType, endpoint string, serviceNames []string, 
 
 var providers map[string]*traceSdk.TracerProvider
 
-func InitTraceProviders(typ traceType, endpoint string, serviceNames []string, addr string) (deferFunc func(), err error) {
+func InitTraceProviders(typ TraceType, endpoint string, serviceNames []string, addr string) (deferFunc func(), err error) {
 	if len(providers) > 0 {
 		err = fmt.Errorf("trace providers already initialized")
 		return

@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
-	"net"
 	"strconv"
-	"strings"
 	"time"
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
@@ -18,70 +16,16 @@ import (
 )
 
 type DefaultRegistrar struct {
-	addr    string
-	network string
-	driver  Driver
+	addr   string
+	driver Driver
 }
 
-func NewDefaultRegistrar(addr string, network string, driver Driver) *DefaultRegistrar {
-	return &DefaultRegistrar{addr: addr, network: network, driver: driver}
+func NewDefaultRegistrar(addr string, driver Driver) *DefaultRegistrar {
+	return &DefaultRegistrar{addr: addr, driver: driver}
 }
 
 func (r *DefaultRegistrar) Register(ctx context.Context, service string) (err error) {
-	addr, err := DetectAddr(r.addr, r.network)
-	if err != nil {
-		err = fmt.Errorf("detect addr failed: %w", err)
-		return
-	}
-	return r.driver.Register(ctx, service, addr)
-}
-
-func DetectAddr(oriAddr string, network string) (realAddr string, err error) {
-	arr := strings.Split(oriAddr, ":")
-	if len(arr) != 2 {
-		err = fmt.Errorf("invalid oriAddr: %s, forget port?", oriAddr)
-		return
-	}
-	hostname := arr[0]
-	if hostname != "" && hostname != "localhost" && hostname != "127.0.0.1" && hostname != "0.0.0.0" {
-		realAddr = oriAddr
-		return
-	}
-
-	interfaces, err := net.Interfaces()
-	if err != nil {
-		err = fmt.Errorf("get interfaces failed: %w", err)
-		return
-	}
-
-	var ip string
-	for _, iface := range interfaces {
-		if network != "" && iface.Name != network {
-			continue
-		}
-		var addrs []net.Addr
-		addrs, err = iface.Addrs()
-		if err != nil {
-			err = fmt.Errorf("get iface %s's addrs failed: %w", iface.Name, err)
-			return
-		}
-		for _, addr := range addrs {
-			ipnet, ok := addr.(*net.IPNet)
-			if ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil { //目前只持支ipv4
-				ip = ipnet.IP.String()
-				break
-			}
-		}
-	}
-
-	if ip == "" {
-		err = fmt.Errorf("no valid address found")
-		return
-	}
-
-	realAddr = ip + ":" + arr[1]
-
-	return
+	return r.driver.Register(ctx, service, r.addr)
 }
 
 type DefaultResolver struct {
