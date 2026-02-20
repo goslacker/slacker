@@ -56,6 +56,16 @@ func (s *Server) Start(ctx context.Context) {
 		panic(fmt.Errorf("tcp listen port failed: %w", err))
 	}
 
+	for serviceName := range s.GetServiceInfo() {
+		if strings.Contains(serviceName, "grpc") {
+			continue
+		}
+		err = s.registrar.Register(ctx, serviceName)
+		if err != nil {
+			panic(fmt.Errorf("register service %s failed: %w", serviceName, err))
+		}
+	}
+
 	defer func() {
 		if s.pprofHttpServer != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

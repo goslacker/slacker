@@ -26,23 +26,6 @@ func (c *Component) Init() (err error) {
 		return registry.BuildDriver(registryConf.Type, registryConf.Endpoints)
 	})
 
-	err = app.Bind[*registry.DefaultRegistrar](func(conf *viper.Viper, driver registry.Driver) (registrar *registry.DefaultRegistrar, err error) {
-		registryConf := &RegistryConfig{}
-		if err = conf.UnmarshalKey("grpcx.registry", registryConf); err != nil {
-			return
-		}
-		registrar = registry.NewDefaultRegistrar(registryConf.Addr, registryConf.Network, driver)
-		return
-	})
-	if err != nil {
-		return
-	}
-
-	err = app.Bind[*registry.DefaultResolver](registry.NewDefaultResolver)
-	if err != nil {
-		return
-	}
-
 	return
 }
 

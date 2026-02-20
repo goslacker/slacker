@@ -2,6 +2,7 @@ package grpcx
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"strings"
 
@@ -14,88 +15,92 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-type traceConfig struct {
+type TraceConfig struct {
 	Type     trace.TraceType `mapstructure:"type"`
 	Endpoint string          `mapstructure:"endpoint"`
 }
 
-type registryConfig struct {
+type RegistryConfig struct {
 	Type      string   `mapstructure:"type"`
 	Endpoints []string `mapstructure:"endpoints"`
 }
 
 type GrpcServerBuilder struct {
-	unaryServerInterceptors  []grpc.UnaryServerInterceptor  //一元拦截器
-	streamServerInterceptors []grpc.StreamServerInterceptor //流拦截器
-	otherServerOptions       []grpc.ServerOption            //grpc其他配置
-	serviceRegisters         []func(grpc.ServiceRegistrar)  // 服务注册器
-	healthCheck              bool                           // 是否开启健康检查
-	reflection               bool                           // 是否开启反射
-	pprofPort                int                            // pprof端口,如果为1-65535,则开启pprof
-	network                  string                         // 网络名称
-	addr                     string                         // 监听地址
-	traceConfig              *traceConfig                   // 链路追踪配置
-	registryConfig           *registryConfig                // 服务注册配置
-	registryDriver           registry.Driver                // 服务注册驱动
+	UnaryServerInterceptors  []grpc.UnaryServerInterceptor  //一元拦截器
+	StreamServerInterceptors []grpc.StreamServerInterceptor //流拦截器
+	OtherServerOptions       []grpc.ServerOption            //grpc其他配置
+	ServiceRegisters         []func(grpc.ServiceRegistrar)  // 服务注册器
+	HealthCheck              bool                           // 是否开启健康检查
+	Reflection               bool                           // 是否开启反射
+	PprofPort                int                            // pprof端口,如果为1-65535,则开启pprof
+	Network                  string                         // 网络名称
+	Addr                     string                         // 监听地址
+	TraceConfig              *TraceConfig                   // 链路追踪配置
+	RegistryConfig           *RegistryConfig                // 服务注册配置
+	RegistryDriver           registry.Driver                // 服务注册驱动
 }
 
 func (c *GrpcServerBuilder) RegisterUnaryInterceptor(interceptors ...grpc.UnaryServerInterceptor) {
-	c.unaryServerInterceptors = append(c.unaryServerInterceptors, interceptors...)
+	c.UnaryServerInterceptors = append(c.UnaryServerInterceptors, interceptors...)
 }
 
 func (c *GrpcServerBuilder) RegisterStreamInterceptor(interceptors ...grpc.StreamServerInterceptor) {
-	c.streamServerInterceptors = append(c.streamServerInterceptors, interceptors...)
+	c.StreamServerInterceptors = append(c.StreamServerInterceptors, interceptors...)
 }
 
 func (c *GrpcServerBuilder) Register(registers ...func(grpc.ServiceRegistrar)) {
-	c.serviceRegisters = append(c.serviceRegisters, registers...)
+	c.ServiceRegisters = append(c.ServiceRegisters, registers...)
 }
 
 func (c *GrpcServerBuilder) SetOtherServerOptions(opts ...grpc.ServerOption) {
-	c.otherServerOptions = append(c.otherServerOptions, opts...)
+	c.OtherServerOptions = append(c.OtherServerOptions, opts...)
 }
 
 func (c *GrpcServerBuilder) Build() (server *Server, err error) {
 	server = &Server{
-		pprofPort: c.pprofPort,
-		addr:      c.addr,
+		pprofPort: c.PprofPort,
+		addr:      c.Addr,
 	}
-	opts := make([]grpc.ServerOption, 0, len(c.otherServerOptions)+2)
-	opts = append(opts, c.otherServerOptions...)
+	opts := make([]grpc.ServerOption, 0, len(c.OtherServerOptions)+2)
+	opts = append(opts, c.OtherServerOptions...)
 	opts = append(opts, []grpc.ServerOption{
-		grpc.ChainUnaryInterceptor(c.unaryServerInterceptors...),
-		grpc.ChainStreamInterceptor(c.streamServerInterceptors...),
+		grpc.ChainUnaryInterceptor(c.UnaryServerInterceptors...),
+		grpc.ChainStreamInterceptor(c.StreamServerInterceptors...),
+		grpc.UnaryInterceptor(trace.UnaryTraceServerInterceptor),
+		grpc.StreamInterceptor(trace.StreamTraceServerInterceptor),
+		grpc.MaxRecvMsgSize(math.MaxInt32),
+		grpc.MaxSendMsgSize(math.MaxInt32),
 	}...)
 	server.Server = grpc.NewServer(opts...)
 	// 注册服务
-	for _, register := range c.serviceRegisters {
+	for _, register := range c.ServiceRegisters {
 		register(server.Server)
 	}
 
 	var healthCheckServer *health.Server
 	// 注册健康检查服务
-	if c.healthCheck {
+	if c.HealthCheck {
 		healthCheckServer = health.NewServer()
 		healthgrpc.RegisterHealthServer(server.Server, healthCheckServer)
 	}
 
 	// 注册反射服务
-	if c.reflection {
+	if c.Reflection {
 		reflection.Register(server.Server)
 	}
 
 	// 通过配置的监听地址和网络名称尝试获取真实的本机ip地址
-	addr, err := DetectAddr(c.addr, c.network)
+	addr, err := DetectAddr(c.Addr, c.Network)
 	if err != nil {
-		err = fmt.Errorf("detect addr failed(network: %s, addr: %s): %w", c.network, c.addr, err)
+		err = fmt.Errorf("detect addr failed(network: %s, addr: %s): %w", c.Network, c.Addr, err)
 		return
 	}
 
 	// 初始化链路追踪
-	if c.traceConfig != nil {
+	if c.TraceConfig != nil {
 		svrMap := server.Server.GetServiceInfo()
 		var providerDefer func()
-		providerDefer, err = trace.InitTraceProviders(c.traceConfig.Type, c.traceConfig.Endpoint, maps.Keys(svrMap), addr)
+		providerDefer, err = trace.InitTraceProviders(c.TraceConfig.Type, c.TraceConfig.Endpoint, maps.Keys(svrMap), addr)
 		if err != nil {
 			err = fmt.Errorf("init trace providers failed: %w", err)
 			return
@@ -104,8 +109,8 @@ func (c *GrpcServerBuilder) Build() (server *Server, err error) {
 	}
 
 	// 初始化服务注册
-	if c.registryConfig != nil {
-		server.registrar = registry.NewDefaultRegistrar(addr, c.registryDriver)
+	if c.RegistryConfig != nil {
+		server.registrar = registry.NewDefaultRegistrar(addr, c.RegistryDriver)
 	}
 
 	return
