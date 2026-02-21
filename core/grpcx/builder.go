@@ -26,16 +26,26 @@ type RegistryConfig struct {
 }
 
 type GrpcServerBuilder struct {
-	ServerOptions    []grpc.ServerOption           //grpc其他配置
-	ServiceRegisters []func(grpc.ServiceRegistrar) // 服务注册器
-	HealthCheck      bool                          // 是否开启健康检查
-	Reflection       bool                          // 是否开启反射
-	PprofPort        int                           // pprof端口,如果为1-65535,则开启pprof
-	Network          string                        // 网络名称
-	Addr             string                        // 监听地址
-	TraceConfig      *TraceConfig                  // 链路追踪配置
-	RegistryConfig   *RegistryConfig               // 服务注册配置
-	RegistryDriver   registry.Driver               // 服务注册驱动
+	UnaryInterceptors  []grpc.UnaryServerInterceptor  // grpcUnaryServerInterceptor
+	StreamInterceptors []grpc.StreamServerInterceptor // grpcStreamServerInterceptor
+	ServerOptions      []grpc.ServerOption            //grpc其他配置
+	ServiceRegisters   []func(grpc.ServiceRegistrar)  // 服务注册器
+	HealthCheck        bool                           // 是否开启健康检查
+	Reflection         bool                           // 是否开启反射
+	PprofPort          int                            // pprof端口,如果为1-65535,则开启pprof
+	Network            string                         // 网络名称
+	Addr               string                         // 监听地址
+	TraceConfig        *TraceConfig                   // 链路追踪配置
+	RegistryConfig     *RegistryConfig                // 服务注册配置
+	RegistryDriver     registry.Driver                // 服务注册驱动
+}
+
+func (c *GrpcServerBuilder) AddUnaryInterceptor(interceptors ...grpc.UnaryServerInterceptor) {
+	c.UnaryInterceptors = append(c.UnaryInterceptors, interceptors...)
+}
+
+func (c *GrpcServerBuilder) AddStreamInterceptor(interceptors ...grpc.StreamServerInterceptor) {
+	c.StreamInterceptors = append(c.StreamInterceptors, interceptors...)
 }
 
 func (c *GrpcServerBuilder) Register(registers ...func(grpc.ServiceRegistrar)) {
@@ -56,15 +66,17 @@ func (c *GrpcServerBuilder) Build() (server *Server, err error) {
 
 	// 初始化链路追踪
 	if c.TraceConfig != nil && c.TraceConfig.Endpoint != "" {
-		c.ServerOptions = append(c.ServerOptions, grpc.UnaryInterceptor(trace.UnaryTraceServerInterceptor),
-			grpc.StreamInterceptor(trace.StreamTraceServerInterceptor))
+		c.UnaryInterceptors = append(c.UnaryInterceptors, trace.UnaryTraceServerInterceptor)
+		c.StreamInterceptors = append(c.StreamInterceptors, trace.StreamTraceServerInterceptor)
 	}
 
-	c.ServerOptions = append(c.ServerOptions, grpc.UnaryInterceptor(interceptor.UnaryErrorInterceptor),
-		grpc.StreamInterceptor(interceptor.StreamErrorInterceptor))
-	c.ServerOptions = append(c.ServerOptions, grpc.UnaryInterceptor(interceptor.UnaryValidateInterceptor),
-		grpc.StreamInterceptor(interceptor.StreamValidateInterceptor))
+	c.UnaryInterceptors = append(c.UnaryInterceptors, interceptor.UnaryErrorInterceptor)
+	c.StreamInterceptors = append(c.StreamInterceptors, interceptor.StreamErrorInterceptor)
+	c.UnaryInterceptors = append(c.UnaryInterceptors, interceptor.UnaryValidateInterceptor)
+	c.StreamInterceptors = append(c.StreamInterceptors, interceptor.StreamValidateInterceptor)
 
+	c.ServerOptions = append(c.ServerOptions, grpc.ChainUnaryInterceptor(c.UnaryInterceptors...))
+	c.ServerOptions = append(c.ServerOptions, grpc.ChainStreamInterceptor(c.StreamInterceptors...))
 	server = &Server{
 		pprofPort: c.PprofPort,
 		addr:      c.Addr,

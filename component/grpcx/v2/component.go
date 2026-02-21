@@ -55,7 +55,7 @@ func (c *Component) Init() (err error) {
 	return
 }
 
-func (c *Component) Start() (err error) {
+func (c *Component) Start() {
 	builder := app.MustResolve[*grpcx.GrpcServerBuilder]()
 	server, err := builder.Build()
 	if err != nil {
@@ -65,7 +65,6 @@ func (c *Component) Start() (err error) {
 	c.server = server
 	c.cancel = cancel
 	server.Start(ctx)
-	return
 }
 
 func (c *Component) Stop() {

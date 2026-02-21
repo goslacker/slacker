@@ -19,7 +19,7 @@ type GrpcGatewayBuilder struct {
 	Registers      []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
 	Options        []runtime.ServeMuxOption
 	ClientOpts     []grpc.DialOption
-	MetadataFuncs  []func(context.Context, *http.Request) metadata.MD
+	MetadataFuncs  []MetadataFunc
 	CustomHandlers map[string]runtime.HandlerFunc
 }
 
@@ -42,7 +42,7 @@ func (c *GrpcGatewayBuilder) SetClientOptions(opts ...grpc.DialOption) {
 	c.ClientOpts = append(c.ClientOpts, opts...)
 }
 
-func (c *GrpcGatewayBuilder) SetMetadataFuncs(fns ...func(context.Context, *http.Request) metadata.MD) {
+func (c *GrpcGatewayBuilder) SetMetadataFuncs(fns ...MetadataFunc) {
 	c.MetadataFuncs = append(c.MetadataFuncs, fns...)
 }
 
@@ -81,19 +81,7 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 	c.Options = append(defaultOpts, c.Options...)
 
 	if len(c.MetadataFuncs) > 0 {
-		c.Options = append(c.Options, runtime.WithMetadata(func(ctx context.Context, request *http.Request) metadata.MD {
-			result := make(metadata.MD)
-			for _, v := range c.MetadataFuncs {
-				md := v(ctx, request)
-				if len(md) == 0 {
-					continue
-				}
-				for k, v := range md {
-					result[k] = v
-				}
-			}
-			return result
-		}))
+		c.Options = append(c.Options, runtime.WithMetadata(ChainMetadataFuncs(c.MetadataFuncs...)))
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -124,4 +112,22 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 	}
 
 	return
+}
+
+type MetadataFunc func(context.Context, *http.Request) metadata.MD
+
+func ChainMetadataFuncs(funcs ...MetadataFunc) MetadataFunc {
+	return func(ctx context.Context, request *http.Request) metadata.MD {
+		result := make(metadata.MD)
+		for _, v := range funcs {
+			md := v(ctx, request)
+			if len(md) == 0 {
+				continue
+			}
+			for k, v := range md {
+				result[k] = v
+			}
+		}
+		return result
+	}
 }
