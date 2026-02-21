@@ -9,6 +9,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+func NewComponent() *Component {
+	return &Component{}
+}
+
 type Component struct {
 	app.Component
 	server *grpcx.Server
@@ -32,7 +36,7 @@ func (c *Component) Init() (err error) {
 		if err = conf.UnmarshalKey("grpcx", &config); err != nil {
 			return
 		}
-		return &grpcx.GrpcServerBuilder{
+		b := &grpcx.GrpcServerBuilder{
 			Addr:           config.Addr,
 			Network:        config.Network,
 			HealthCheck:    config.HealthCheck,
@@ -41,7 +45,8 @@ func (c *Component) Init() (err error) {
 			TraceConfig:    &config.Trace,
 			PprofPort:      config.PprofPort,
 			RegistryDriver: driver,
-		}, nil
+		}
+		return b, nil
 	})
 	if err != nil {
 		return

@@ -1,0 +1,15 @@
+syntax = "proto3";
+package grpcx;
+
+option go_package = "github.com/goslacker/slacker/core/grpcx";
+
+message ErrorDetail {
+	int32 code = 1;
+	string message = 2;
+    repeated FieldErrorDetail field_errors = 3;
+}
+
+message FieldErrorDetail {
+	string field = 1;
+	string message = 2;
+}

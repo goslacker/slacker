@@ -4,22 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"net/http"
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 type GrpcGatewayBuilder struct {
 	Endpoint       string //grpc连接地址
 	Addr           string //http服务地址
-	Ctx            context.Context
 	Registers      []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
 	Options        []runtime.ServeMuxOption
+	ClientOpts     []grpc.DialOption
+	MetadataFuncs  []func(context.Context, *http.Request) metadata.MD
 	CustomHandlers map[string]runtime.HandlerFunc
 }
 
@@ -38,6 +38,14 @@ func (c *GrpcGatewayBuilder) SetOptions(options ...runtime.ServeMuxOption) {
 	c.Options = append(c.Options, options...)
 }
 
+func (c *GrpcGatewayBuilder) SetClientOptions(opts ...grpc.DialOption) {
+	c.ClientOpts = append(c.ClientOpts, opts...)
+}
+
+func (c *GrpcGatewayBuilder) SetMetadataFuncs(fns ...func(context.Context, *http.Request) metadata.MD) {
+	c.MetadataFuncs = append(c.MetadataFuncs, fns...)
+}
+
 func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 	server = &Server{}
 	if len(c.Registers) <= 0 {
@@ -47,8 +55,7 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 
 	conn, err := grpc.NewClient(
 		c.Endpoint,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(math.MaxInt32), grpc.MaxCallSendMsgSize(math.MaxInt32)),
+		c.ClientOpts...,
 	)
 	if err != nil {
 		err = fmt.Errorf("Failed to dial server: %w", err)
@@ -67,9 +74,34 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 		}
 	})
 
+	defaultOpts := []runtime.ServeMuxOption{
+		runtime.WithForwardResponseRewriter(DefaultResponseRewriter),
+		runtime.WithErrorHandler(DefaultErrorHandler),
+	}
+	c.Options = append(defaultOpts, c.Options...)
+
+	if len(c.MetadataFuncs) > 0 {
+		c.Options = append(c.Options, runtime.WithMetadata(func(ctx context.Context, request *http.Request) metadata.MD {
+			result := make(metadata.MD)
+			for _, v := range c.MetadataFuncs {
+				md := v(ctx, request)
+				if len(md) == 0 {
+					continue
+				}
+				for k, v := range md {
+					result[k] = v
+				}
+			}
+			return result
+		}))
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	server.defers = append(server.defers, cancel)
+
 	mux := runtime.NewServeMux(c.Options...)
 	for _, register := range c.Registers {
-		err = register(c.Ctx, mux, conn)
+		err = register(ctx, mux, conn)
 		if err != nil {
 			err = fmt.Errorf("Failed to register gateway: %w", err)
 			return
