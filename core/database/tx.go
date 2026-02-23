@@ -5,7 +5,7 @@ import (
 	"database/sql"
 )
 
-//go:generate mockgen -destination=tx_manager.go -package=databasex . TxManager
+//go:generate mockgen -destination=tx_manager.go -package=database . TxManager
 
 type TxManager interface {
 	Begin(opts ...*sql.TxOptions) (newCtx context.Context, err error)
