@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
@@ -118,8 +119,17 @@ func (e *EtcdDriver) Resolve(ctx context.Context, service string) (addrs []strin
 	return
 }
 
+var chanLock sync.Mutex
+var chans = make(map[string]chan []string)
+
 func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan []string, err error) {
-	addrsChan = make(chan []string, 1)
+	chanLock.Lock()
+	addrsChan, ok := chans[service]
+	if !ok {
+		addrsChan = make(chan []string, 1)
+		chans[service] = addrsChan
+	}
+	chanLock.Unlock()
 
 	resp, err := e.c.Get(ctx, service, clientv3.WithPrefix())
 	if err != nil {
@@ -143,7 +153,7 @@ func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan 
 	}
 	rch := e.c.Watch(ctx, service, opts...)
 	go func() {
-		defer close(addrsChan)
+		defer e.Watch(ctx, service)
 	LOOP:
 		for res := range rch {
 			select {
@@ -191,7 +201,10 @@ func BuildDriver(typ string, endpoints []string) (driver Driver, err error) {
 	case "etcd":
 		var c *clientv3.Client
 		c, err = clientv3.New(clientv3.Config{
-			Endpoints: endpoints,
+			Endpoints:            endpoints,
+			DialKeepAliveTime:    30 * time.Second,
+			DialKeepAliveTimeout: 60 * time.Second,
+			DialTimeout:          10 * time.Second,
 		})
 		if err != nil {
 			err = fmt.Errorf("new etcd client failed: %w", err)
