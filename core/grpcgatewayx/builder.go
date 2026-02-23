@@ -13,6 +13,12 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+type CustomerHandler struct {
+	Method  string
+	Path    string
+	Handler runtime.HandlerFunc
+}
+
 type GrpcGatewayBuilder struct {
 	Endpoint       string //grpc连接地址
 	Addr           string //http服务地址
@@ -23,11 +29,13 @@ type GrpcGatewayBuilder struct {
 	CustomHandlers map[string]runtime.HandlerFunc
 }
 
-func (c *GrpcGatewayBuilder) RegisterCustomHandler(method string, path string, handler runtime.HandlerFunc) {
+func (c *GrpcGatewayBuilder) RegisterCustomHandler(handlers ...CustomerHandler) {
 	if c.CustomHandlers == nil {
 		c.CustomHandlers = make(map[string]runtime.HandlerFunc)
 	}
-	c.CustomHandlers[fmt.Sprintf("%s|%s", method, path)] = handler
+	for _, handler := range handlers {
+		c.CustomHandlers[fmt.Sprintf("%s|%s", handler.Method, handler.Path)] = handler.Handler
+	}
 }
 
 func (c *GrpcGatewayBuilder) Register(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
