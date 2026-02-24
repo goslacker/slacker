@@ -2,7 +2,6 @@ package grpcx
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"sync"
 
@@ -29,7 +28,6 @@ type Resolver struct {
 }
 
 func (r *Resolver) ResolveNow(p0 resolver.ResolveNowOptions) {
-	fmt.Printf("resolveNow: %+v", r.target)
 	r.once.Do(func() {
 		go r.watch()
 	})
@@ -75,6 +73,7 @@ type ResolverBuilder struct {
 
 func (e *ResolverBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	r := NewResolver(target, cc, e.Resolver)
+	r.ResolveNow(resolver.ResolveNowOptions{})
 	return r, nil
 }
 func (*ResolverBuilder) Scheme() string { return "" }
