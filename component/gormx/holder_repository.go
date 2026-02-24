@@ -125,15 +125,15 @@ func (h *HolderRepository[PO, Entity, Condition]) Pagination(ctx context.Context
 		err = errors.New("condition must be PaginationCondition")
 		return
 	}
-	if !pagination.Validate() {
-		pagination = NewPagination(1, 15)
-	}
 	query := h.BuildQuery(ctx, condition)
 	err = query.Model(new(PO)).Count(&total).Error
 	if err != nil {
 		return 0, nil, err
 	}
 	var models []*PO
+	if !pagination.Validate() {
+		pagination = NewPagination(1, 1000) // 分页参数不合法时，默认分页参数
+	}
 	err = pagination.SetQuery(query).Find(&models).Error
 	if err != nil {
 		return
