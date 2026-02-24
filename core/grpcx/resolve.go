@@ -27,25 +27,30 @@ type Resolver struct {
 	resolver registry.Resolver
 	cancel   context.CancelFunc
 	watched  atomic.Bool
-	once     sync.Once
+	wg       sync.WaitGroup
 }
 
 func (r *Resolver) ResolveNow(p0 resolver.ResolveNowOptions) {
-	if r.watched.Load() {
+	if !r.watched.CompareAndSwap(false, true) {
 		return
 	}
-	r.watched.Store(true)
+	r.wg.Add(1)
 	go r.watch()
 }
 
 func (r *Resolver) watch() {
-	var ctx context.Context
-	ctx, r.cancel = context.WithCancel(context.Background())
+	defer func() {
+		r.watched.Store(false)
+		r.wg.Done()
+	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	c, err := r.resolver.Watch(ctx, r.target.Endpoint())
 	if err != nil {
 		r.cc.ReportError(err)
 		return
 	}
+	r.cancel = cancel
 	var addresses []resolver.Address
 	for addrs := range c {
 		select {
@@ -70,7 +75,7 @@ func (r *Resolver) Close() {
 	if r.cancel != nil {
 		r.cancel()
 	}
-	r.watched.Store(false)
+	r.wg.Wait()
 }
 
 // ResolverBuilder 需实现 Builder 接口

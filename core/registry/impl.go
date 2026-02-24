@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"strconv"
-	"sync"
 	"time"
 
 	"go.etcd.io/etcd/api/v3/mvccpb"
@@ -118,17 +117,8 @@ func (e *EtcdDriver) Resolve(ctx context.Context, service string) (addrs []strin
 	return
 }
 
-var chanLock sync.Mutex
-var chans = make(map[string]chan []string)
-
 func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan []string, err error) {
-	chanLock.Lock()
-	addrsChan, ok := chans[service]
-	if !ok {
-		addrsChan = make(chan []string, 1)
-		chans[service] = addrsChan
-	}
-	chanLock.Unlock()
+	addrsChan = make(chan []string, 1)
 
 	resp, err := e.c.Get(ctx, service, clientv3.WithPrefix())
 	if err != nil {
@@ -152,6 +142,7 @@ func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan 
 	}
 	rch := e.c.Watch(ctx, service, opts...)
 	go func() {
+		defer close(addrsChan)
 	LOOP:
 		for res := range rch {
 			select {
