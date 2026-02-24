@@ -54,6 +54,7 @@ func NewEtcdDriver(c *clientv3.Client) *EtcdDriver {
 }
 
 func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) (err error) {
+	println(1111111)
 	var resp *clientv3.LeaseGrantResponse
 	{
 		resp, err = e.c.Grant(ctx, 20)
@@ -61,6 +62,7 @@ func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) 
 			return fmt.Errorf("grant lease failed: %w", err)
 		}
 	}
+	println(222222)
 
 	key := service + "/" + strconv.FormatInt(int64(resp.ID), 10)
 
@@ -70,7 +72,7 @@ func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) 
 		return
 	}
 	slog.Info("register service success", "service", service, "addr", addr)
-
+	println(333333)
 	var (
 		ch     <-chan *clientv3.LeaseKeepAliveResponse
 		cancel context.CancelFunc
@@ -87,6 +89,7 @@ func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) 
 			return fmt.Errorf("keep service '%s' alive failed: %w", service, err)
 		}
 	}
+	println(444444)
 
 	go func() {
 		for range ch {
@@ -103,6 +106,7 @@ func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) 
 			}
 		}
 	}()
+	println(5555555)
 
 	return
 }
