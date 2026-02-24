@@ -78,11 +78,13 @@ func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) 
 		cancel context.CancelFunc
 	)
 	{
-		var ctx context.Context
-		ctx, cancel = context.WithCancel(ctx)
-		ch, err = e.c.KeepAlive(ctx, resp.ID)
+		c, cancelFunc := context.WithCancel(ctx)
+		cancel = func() {
+			e.c.Revoke(c, resp.ID)
+			cancelFunc()
+		}
+		ch, err = e.c.KeepAlive(c, resp.ID)
 		if err != nil {
-			e.c.Revoke(ctx, resp.ID)
 			cancel()
 			return fmt.Errorf("keep service '%s' alive failed: %w", service, err)
 		}
