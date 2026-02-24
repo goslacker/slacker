@@ -2,8 +2,10 @@ package grpcx
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/goslacker/slacker/core/registry"
 	"google.golang.org/grpc/resolver"
@@ -24,13 +26,16 @@ type Resolver struct {
 	cc       resolver.ClientConn
 	resolver registry.Resolver
 	cancel   context.CancelFunc
+	watched  atomic.Bool
 	once     sync.Once
 }
 
 func (r *Resolver) ResolveNow(p0 resolver.ResolveNowOptions) {
-	r.once.Do(func() {
-		go r.watch()
-	})
+	if r.watched.Load() {
+		return
+	}
+	r.watched.Store(true)
+	go r.watch()
 }
 
 func (r *Resolver) watch() {
@@ -39,12 +44,14 @@ func (r *Resolver) watch() {
 	c, err := r.resolver.Watch(ctx, r.target.Endpoint())
 	if err != nil {
 		r.cc.ReportError(err)
+		r.watched.Store(false)
 		return
 	}
 	var addresses []resolver.Address
 	for addrs := range c {
 		select {
 		case <-ctx.Done():
+			r.watched.Store(false)
 			return
 		default:
 		}
@@ -55,6 +62,7 @@ func (r *Resolver) watch() {
 		}
 		err = r.cc.UpdateState(resolver.State{Addresses: addresses})
 		if err != nil {
+			slog.Error("update grpc state failed", "error", err)
 			r.cc.ReportError(err)
 		}
 	}

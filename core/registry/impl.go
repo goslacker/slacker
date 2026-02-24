@@ -152,7 +152,6 @@ func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan 
 	}
 	rch := e.c.Watch(ctx, service, opts...)
 	go func() {
-		defer e.Watch(ctx, service)
 	LOOP:
 		for res := range rch {
 			select {
