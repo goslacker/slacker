@@ -126,8 +126,7 @@ func (h *HolderRepository[PO, Entity, Condition]) Pagination(ctx context.Context
 		return
 	}
 	if !pagination.Validate() {
-		err = errors.New("pagination is invalid")
-		return
+		pagination = NewPagination(1, 15)
 	}
 	query := h.BuildQuery(ctx, condition)
 	err = query.Model(new(PO)).Count(&total).Error
