@@ -44,14 +44,12 @@ func (r *Resolver) watch() {
 	c, err := r.resolver.Watch(ctx, r.target.Endpoint())
 	if err != nil {
 		r.cc.ReportError(err)
-		r.watched.Store(false)
 		return
 	}
 	var addresses []resolver.Address
 	for addrs := range c {
 		select {
 		case <-ctx.Done():
-			r.watched.Store(false)
 			return
 		default:
 		}
@@ -72,6 +70,7 @@ func (r *Resolver) Close() {
 	if r.cancel != nil {
 		r.cancel()
 	}
+	r.watched.Store(false)
 }
 
 // ResolverBuilder 需实现 Builder 接口
