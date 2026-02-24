@@ -78,7 +78,7 @@ func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) 
 		cancel context.CancelFunc
 	)
 	{
-		ctx := ctx
+		var ctx context.Context
 		ctx, cancel = context.WithCancel(ctx)
 		ch, err = e.c.KeepAlive(ctx, resp.ID)
 		if err != nil {
