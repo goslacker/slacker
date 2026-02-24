@@ -56,9 +56,7 @@ func NewEtcdDriver(c *clientv3.Client) *EtcdDriver {
 func (e *EtcdDriver) Register(ctx context.Context, service string, addr string) (err error) {
 	var resp *clientv3.LeaseGrantResponse
 	{
-		ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		resp, err = e.c.Grant(ctx, 10)
-		cancel()
 		if err != nil {
 			return fmt.Errorf("grant lease failed: %w", err)
 		}
