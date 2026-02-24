@@ -3,6 +3,7 @@ package grpcx
 import (
 	"context"
 	"slices"
+	"sync"
 
 	"github.com/goslacker/slacker/core/registry"
 	"google.golang.org/grpc/resolver"
@@ -15,8 +16,6 @@ func NewResolver(target resolver.Target, cc resolver.ClientConn, registry regist
 		resolver: registry,
 	}
 
-	go r.watch()
-
 	return r
 }
 
@@ -25,9 +24,14 @@ type Resolver struct {
 	cc       resolver.ClientConn
 	resolver registry.Resolver
 	cancel   context.CancelFunc
+	once     sync.Once
 }
 
-func (r *Resolver) ResolveNow(p0 resolver.ResolveNowOptions) {}
+func (r *Resolver) ResolveNow(p0 resolver.ResolveNowOptions) {
+	r.once.Do(func() {
+		go r.watch()
+	})
+}
 
 func (r *Resolver) watch() {
 	var ctx context.Context
