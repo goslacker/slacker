@@ -122,7 +122,6 @@ var chanLock sync.Mutex
 var chans = make(map[string]chan []string)
 
 func (e *EtcdDriver) Watch(ctx context.Context, service string) (addrsChan chan []string, err error) {
-	println(service)
 	chanLock.Lock()
 	addrsChan, ok := chans[service]
 	if !ok {
