@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option go_package = "./grpcgatewayx/testpb";
+
+message TestMessage {
+  repeated uint64 uint64array = 1;
+  repeated int32 int32array = 2;
+}
