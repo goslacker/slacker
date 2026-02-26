@@ -82,9 +82,11 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 		}
 	})
 
+	// 默认配置
 	defaultOpts := []runtime.ServeMuxOption{
 		runtime.WithForwardResponseRewriter(DefaultResponseRewriter),
 		runtime.WithErrorHandler(DefaultErrorHandler),
+		runtime.SetQueryParameterParser(&QueryParser{}),
 	}
 	c.Options = append(defaultOpts, c.Options...)
 
