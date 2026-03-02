@@ -47,6 +47,7 @@ func (r *Resolver) watch() {
 	defer cancel()
 	c, err := r.resolver.Watch(ctx, r.target.Endpoint())
 	if err != nil {
+		slog.Error("watch service failed", "service", r.target.Endpoint(), "error", err)
 		r.cc.ReportError(err)
 		return
 	}
