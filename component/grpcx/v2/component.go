@@ -36,6 +36,7 @@ func (c *Component) Init() (err error) {
 		if err = conf.UnmarshalKey("grpcx", &config); err != nil {
 			return
 		}
+		println("11111111", config.Network)
 		b := &grpcx.GrpcServerBuilder{
 			Addr:           config.Addr,
 			Network:        config.Network,

@@ -137,11 +137,6 @@ func DetectAddr(oriAddr string, network string) (realAddr string, err error) {
 		return
 	}
 
-	println(network)
-	for _, i := range interfaces {
-		fmt.Printf("%+v\n", i)
-	}
-
 	var ip string
 	for _, iface := range interfaces {
 		if network != "" && iface.Name != network {
