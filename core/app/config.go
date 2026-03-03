@@ -1,11 +1,12 @@
 package app
 
 import (
-	"github.com/goslacker/slacker/core/container"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/goslacker/slacker/core/container"
 
 	"github.com/spf13/viper"
 )

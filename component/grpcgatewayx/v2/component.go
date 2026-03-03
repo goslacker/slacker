@@ -1,7 +1,6 @@
 package grpcgatewayx
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/goslacker/slacker/core/app"
@@ -23,13 +22,17 @@ type Component struct {
 	server *grpcgatewayx.Server
 }
 
+func (c *Component) getConfig(conf *viper.Viper) (cfg config) {
+	cfg = config{
+		Endpoint: conf.GetString("grpcgatewayx.endpoint"),
+		Addr:     conf.GetString("grpcgatewayx.addr"),
+	}
+	return
+}
+
 func (c *Component) Init() (err error) {
 	err = app.Bind[*grpcgatewayx.GrpcGatewayBuilder](func(conf *viper.Viper) (builder *grpcgatewayx.GrpcGatewayBuilder, err error) {
-		var cfg config
-		if err = conf.UnmarshalKey("grpcgatewayx", &cfg); err != nil {
-			err = fmt.Errorf("Failed to unmarshal config: %w", err)
-			return
-		}
+		cfg := c.getConfig(conf)
 		b := &grpcgatewayx.GrpcGatewayBuilder{
 			Endpoint: cfg.Endpoint,
 			Addr:     cfg.Addr,

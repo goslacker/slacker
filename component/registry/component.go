@@ -17,13 +17,18 @@ type Component struct {
 	app.Component
 }
 
+func (c *Component) getConfig(conf *viper.Viper) (cfg RegistryConfig) {
+	cfg = RegistryConfig{
+		Type:      conf.GetString("grpcx.registry.type"),
+		Endpoints: conf.GetStringSlice("grpcx.registry.endpoints"),
+	}
+	return
+}
+
 func (c *Component) Init() (err error) {
 	err = app.Bind[*registry.Driver](func(conf *viper.Viper) (driver registry.Driver, err error) {
-		registryConf := &RegistryConfig{}
-		if err = conf.UnmarshalKey("grpcx.registry", registryConf); err != nil {
-			return
-		}
-		return registry.BuildDriver(registryConf.Type, registryConf.Endpoints)
+		cfg := c.getConfig(conf)
+		return registry.BuildDriver(cfg.Type, cfg.Endpoints)
 	})
 
 	return

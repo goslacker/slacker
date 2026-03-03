@@ -6,6 +6,7 @@ import (
 	"github.com/goslacker/slacker/core/app"
 	"github.com/goslacker/slacker/core/grpcx"
 	"github.com/goslacker/slacker/core/registry"
+	"github.com/goslacker/slacker/core/trace"
 	"github.com/spf13/viper"
 )
 
@@ -19,32 +20,45 @@ type Component struct {
 	cancel context.CancelFunc
 }
 
+func (c *Component) getConfig(conf *viper.Viper) (cfg config) {
+	cfg = config{
+		Addr:        conf.GetString("grpcx.addr"),
+		Network:     conf.GetString("grpcx.network"),
+		HealthCheck: conf.GetBool("grpcx.health_check"),
+		Reflection:  conf.GetBool("grpcx.reflection"),
+		PprofPort:   conf.GetInt("grpcx.pprof_port"),
+		Registry: grpcx.RegistryConfig{
+			Type:      conf.GetString("grpcx.registry.type"),
+			Endpoints: conf.GetStringSlice("grpcx.registry.endpoints"),
+		},
+		Trace: grpcx.TraceConfig{
+			Type:     trace.TraceType(conf.GetString("grpcx.trace.type")),
+			Endpoint: conf.GetString("grpcx.trace.endpoint"),
+		},
+	}
+	return
+}
+
 func (c *Component) Init() (err error) {
 	err = app.Bind[registry.Driver](func(conf *viper.Viper) (driver registry.Driver, err error) {
-		var config config
-		if err = conf.UnmarshalKey("grpcx", &config); err != nil {
-			return
-		}
-		return registry.BuildDriver(config.Registry.Type, config.Registry.Endpoints)
+		cfg := c.getConfig(conf)
+		return registry.BuildDriver(cfg.Registry.Type, cfg.Registry.Endpoints)
 	})
 	if err != nil {
 		return
 	}
 
 	err = app.Bind[*grpcx.GrpcServerBuilder](func(conf *viper.Viper, driver registry.Driver) (server *grpcx.GrpcServerBuilder, err error) {
-		var config config
-		if err = conf.UnmarshalKey("grpcx", &config); err != nil {
-			return
-		}
-		println("11111111", config.Network)
+		// conf.UnmarshalKey("grpcx", &config)有问题, 不能取到环境变量中的Network字段
+		cfg := c.getConfig(conf)
 		b := &grpcx.GrpcServerBuilder{
-			Addr:           config.Addr,
-			Network:        config.Network,
-			HealthCheck:    config.HealthCheck,
-			Reflection:     config.Reflection,
-			RegistryConfig: &config.Registry,
-			TraceConfig:    &config.Trace,
-			PprofPort:      config.PprofPort,
+			Addr:           cfg.Addr,
+			Network:        cfg.Network,
+			HealthCheck:    cfg.HealthCheck,
+			Reflection:     cfg.Reflection,
+			RegistryConfig: &cfg.Registry,
+			TraceConfig:    &cfg.Trace,
+			PprofPort:      cfg.PprofPort,
 			RegistryDriver: driver,
 		}
 		return b, nil
