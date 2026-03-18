@@ -29,6 +29,9 @@ func NewRepository[PO any, Entity any](db *gorm.DB, opts ...func(*Repository[PO,
 	return r
 }
 
+// Repository
+//
+// Deprecated: use HolderRepository instead
 type Repository[PO any, Entity any] struct {
 	DB  *gorm.DB
 	Ctx context.Context
