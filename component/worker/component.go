@@ -13,15 +13,13 @@ func NewComponent() *Component {
 
 type Component struct {
 	app.Component
-	*Manager
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
 func (c *Component) Init() error {
 	return app.Bind[*Manager](func() *Manager {
-		c.Manager = NewManager()
-		return c.Manager
+		return NewManager()
 	})
 }
 
@@ -29,7 +27,8 @@ func (c *Component) Init() error {
 func (c *Component) Start() {
 	time.Sleep(time.Second * 5)
 	c.ctx, c.cancel = context.WithCancel(context.Background())
-	c.Manager.Start(c.ctx)
+	manager := app.MustResolve[*Manager]()
+	manager.Start(c.ctx)
 }
 
 // Stop 停止服务并阻塞, 报错应打日志记录
