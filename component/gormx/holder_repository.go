@@ -16,7 +16,17 @@ type Pagination struct {
 	Size int
 }
 
+func NewPaginationWithDefaultSize(page int, size int, defaultSize int) Pagination {
+	if size == 0 {
+		size = defaultSize
+	}
+	return NewPagination(page, size)
+}
+
 func NewPagination(page int, size int) Pagination {
+	if page == 0 {
+		page = 1
+	}
 	return Pagination{
 		Page: page,
 		Size: size,
@@ -145,15 +155,21 @@ func (h *HolderRepository[PO, Entity, Condition]) Pagination(ctx context.Context
 	return
 }
 
-func (h *HolderRepository[PO, Entity, Condition]) UpdatesByEntity(ctx context.Context, condition Condition, entity *Entity) error {
-	return h.updates(ctx, condition, entity)
+func (h *HolderRepository[PO, Entity, Condition]) Update(ctx context.Context, entity *Entity) error {
+	return tool.SimpleMapFuncBack(entity, func(dest *PO) (err error) {
+		return h.DB.GetDB().Updates(dest).Error
+	})
 }
 
-func (h *HolderRepository[PO, Entity, Condition]) UpdatesByMap(ctx context.Context, condition Condition, updates map[string]any) error {
-	return h.updates(ctx, condition, updates)
+func (h *HolderRepository[PO, Entity, Condition]) UpdateFieldsByEntity(ctx context.Context, condition Condition, entity *Entity) error {
+	return h.Updates(ctx, condition, entity)
 }
 
-func (h *HolderRepository[PO, Entity, Condition]) updates(ctx context.Context, condition Condition, entOrMap any) (err error) {
+func (h *HolderRepository[PO, Entity, Condition]) UpdateFields(ctx context.Context, condition Condition, fields map[string]any) error {
+	return h.Updates(ctx, condition, fields)
+}
+
+func (h *HolderRepository[PO, Entity, Condition]) Updates(ctx context.Context, condition Condition, entOrMap any) (err error) {
 	query := h.BuildQuery(ctx, condition)
 	switch x := entOrMap.(type) {
 	case *Entity:
