@@ -37,3 +37,10 @@ type Migrator interface {
 	Up(stepNum int) error
 	Down(stepNum int) error
 }
+
+type Sort string
+
+const (
+	Asc  Sort = "asc"
+	Desc Sort = "desc"
+)
