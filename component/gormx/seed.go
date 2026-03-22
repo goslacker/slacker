@@ -5,7 +5,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type SeedComponent struct{}
+func NewSeedComponent() *SeedComponent {
+	return &SeedComponent{}
+}
+
+type SeedComponent struct {
+	app.Component
+}
 
 func (s *SeedComponent) Init() (err error) {
 	err = app.Bind[*SeedManager](func() *SeedManager {
