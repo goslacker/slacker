@@ -226,15 +226,17 @@ func (c *Component) Stop() {
 }
 
 func RegisterGateway(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
-	app.RegisterListener(func(event app.AfterInit) {
+	app.RegisterListener(func(event app.AfterInit) (err error) {
 		gateway := app.MustResolve[*Component]()
 		gateway.Register(registers...)
+		return
 	})
 }
 
 func RegisterCustomerHandler(method string, path string, handler runtime.HandlerFunc) {
-	app.RegisterListener(func(event app.AfterInit) {
+	app.RegisterListener(func(event app.AfterInit) (err error) {
 		gateway := app.MustResolve[*Component]()
 		gateway.RegisterCustomerHandler(method, path, handler)
+		return
 	})
 }

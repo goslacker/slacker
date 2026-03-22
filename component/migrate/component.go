@@ -1,9 +1,11 @@
 package migrate
 
 import (
+	"fmt"
+	"log/slog"
+
 	"github.com/goslacker/slacker/core/app"
 	"github.com/goslacker/slacker/core/database"
-	"log/slog"
 )
 
 func NewComponent() *Component {
@@ -22,7 +24,7 @@ func (m Component) Init() (err error) {
 		return
 	}
 
-	app.RegisterListener(func(event app.BeforeBoot) {
+	app.RegisterListener(func(event app.BeforeBoot) (err error) {
 		err = app.Invoke(func(m database.Migrator) (err error) {
 			err = m.Migrate()
 			if err != nil {
@@ -31,8 +33,10 @@ func (m Component) Init() (err error) {
 			return
 		})
 		if err != nil {
-			slog.Error("migrate failed", "err", err)
+			err = fmt.Errorf("migrate failed: %w", err)
+			slog.Error(err.Error())
 		}
+		return
 	})
 
 	return

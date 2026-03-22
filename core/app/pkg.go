@@ -60,8 +60,8 @@ func MustResolveDirectly[T any](provider any, opts ...func(*container.InvokeOpts
 func RegisterListener[T any](listeners ...eventbus.ListenerFunc[T]) {
 	eventbus.Register(listeners...)
 }
-func Fire[T any](event T) {
-	eventbus.Fire(event)
+func Fire[T any](event T) (err error) {
+	return eventbus.Fire(event)
 }
 
 func GetContainer() *container.Container {

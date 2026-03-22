@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -8,14 +9,15 @@ import (
 )
 
 func init() {
-	RegisterListener(func(event BeforeInit) {
+	RegisterListener(func(event BeforeInit) (err error) {
 		opts := &slog.HandlerOptions{
 			AddSource: true,
 		}
 
 		c, err := Resolve[*viper.Viper]()
 		if err != nil {
-			slog.Error("init slog failed", "err", err)
+			err = fmt.Errorf("get viper when init slog failed: %w", err)
+			slog.Error(err.Error())
 			return
 		}
 
@@ -24,5 +26,6 @@ func init() {
 		}
 
 		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, opts)))
+		return
 	})
 }

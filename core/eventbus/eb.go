@@ -4,32 +4,30 @@ import (
 	"reflect"
 )
 
-type ListenerFunc[T any] func(event T)
+type ListenerFunc[T any] func(event T) error
 
 var listenerMap = make(map[reflect.Type][]reflect.Value)
 
 func Register[T any](listeners ...ListenerFunc[T]) {
 	for _, listener := range listeners {
 		v := reflect.ValueOf(listener)
-		listenerMap[v.Type().In(0)] = append(listenerMap[v.Type().In(0)], v)
+		eventType := v.Type().In(0)
+		listenerMap[eventType] = append(listenerMap[eventType], v)
 	}
-
-	return
 }
 
-func Fire[T any](event T) {
+func Fire[T any](event T) (err error) {
 	t := reflect.TypeOf(event)
 	listeners, ok := listenerMap[t]
 	if !ok {
 		return
 	}
-	ch := make(chan struct{})
-	go func() {
-		defer func() { ch <- struct{}{} }()
-		for _, listener := range listeners {
-			listener.Call([]reflect.Value{reflect.ValueOf(event)})
+	for _, listener := range listeners {
+		results := listener.Call([]reflect.Value{reflect.ValueOf(event)})
+		if !results[0].IsNil() {
+			err = results[0].Interface().(error)
+			return
 		}
-	}()
-	<-ch
-	close(ch)
+	}
+	return
 }

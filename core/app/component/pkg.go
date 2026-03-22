@@ -23,11 +23,11 @@ func SimpleComponent(init, boot func() error) *simpleComponent {
 	}
 }
 
-func AfterInit(afterInit func()) *simpleComponent {
+func AfterInit(f func() error) *simpleComponent {
 	return &simpleComponent{
 		init: func() error {
-			app.RegisterListener(func(event app.AfterInit) {
-				afterInit()
+			app.RegisterListener(func(event app.AfterInit) (err error) {
+				return f()
 			})
 			return nil
 		},

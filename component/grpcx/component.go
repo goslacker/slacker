@@ -249,11 +249,12 @@ func (c *Component) Stop() {
 }
 
 func RegisterGrpcService(registers ...func(grpc.ServiceRegistrar)) {
-	app.RegisterListener(func(event app.AfterInit) {
+	app.RegisterListener(func(event app.AfterInit) (err error) {
 		app.MustResolve[*Component]().Register(func(sr grpc.ServiceRegistrar) {
 			for _, register := range registers {
 				register(sr)
 			}
 		})
+		return
 	})
 }

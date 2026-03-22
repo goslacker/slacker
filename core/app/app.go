@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
@@ -25,7 +26,10 @@ func (a *App) RegisterComponent(components ...Component) {
 }
 
 func (a *App) Init() (err error) {
-	Fire(BeforeInit{})
+	err = Fire(BeforeInit{})
+	if err != nil {
+		return
+	}
 	for _, module := range a.components {
 		if m, ok := module.(Initable); ok {
 			err = m.Init()
@@ -34,13 +38,19 @@ func (a *App) Init() (err error) {
 			}
 		}
 	}
-	Fire(AfterInit{})
+	err = Fire(AfterInit{})
+	if err != nil {
+		return
+	}
 
 	return
 }
 
 func (a *App) Boot() (err error) {
-	Fire(BeforeBoot{})
+	err = Fire(BeforeBoot{})
+	if err != nil {
+		return
+	}
 	for _, module := range a.components {
 		if m, ok := module.(Bootable); ok {
 			err = m.Boot()
@@ -49,7 +59,10 @@ func (a *App) Boot() (err error) {
 			}
 		}
 	}
-	Fire(AfterBoot{})
+	err = Fire(AfterBoot{})
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -65,8 +78,10 @@ func (a *App) Run() (n int, err error) {
 		return
 	}
 
-	Fire(BeforeRun{})
-	defer Fire(AfterRun{})
+	err = Fire(BeforeRun{})
+	if err != nil {
+		return
+	}
 	for _, m := range a.components {
 		if module, ok := m.(Serviceable); ok {
 			a.wg.Add(1)
@@ -77,17 +92,31 @@ func (a *App) Run() (n int, err error) {
 			n++
 		}
 	}
+	err = Fire(AfterRun{})
+	if err != nil {
+		a.Shutdown()
+		return
+	}
 
 	return
 }
 
 func (a *App) Shutdown() {
-	Fire(BeforeShutdown{})
-	defer Fire(AfterShutdown{})
+	err := Fire(BeforeShutdown{})
+	if err != nil {
+		slog.Error("fire before shutdown event failed", "error", err)
+	}
 	for _, m := range a.components {
 		if module, ok := m.(Serviceable); ok {
 			go module.Stop()
 		}
+	}
+	println("wait module stop...")
+	a.wg.Wait()
+	println("bye bye~~")
+	err = Fire(AfterShutdown{})
+	if err != nil {
+		slog.Error("fire after shutdown event failed", "error", err)
 	}
 }
 
@@ -111,10 +140,6 @@ func (a *App) RunAndWait() (err error) {
 		close(signals)
 		a.Shutdown()
 	}
-
-	println("wait module stop...")
-	a.wg.Wait()
-	println("bye bye~")
 
 	return
 }
