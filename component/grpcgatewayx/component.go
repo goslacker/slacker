@@ -12,6 +12,7 @@ import (
 	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
 	"google.golang.org/grpc/metadata"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/goslacker/slacker/core/app"
@@ -188,6 +189,18 @@ func (c *Component) Start() {
 	if c.queryParser != nil {
 		options = append(options, runtime.SetQueryParameterParser(c.queryParser))
 	}
+	options = append(options, runtime.WithMarshalerOption(
+		runtime.MIMEWildcard,
+		&runtime.JSONPb{
+			MarshalOptions: protojson.MarshalOptions{
+				EmitUnpopulated: true,
+				UseEnumNumbers:  true,
+			},
+			UnmarshalOptions: protojson.UnmarshalOptions{
+				DiscardUnknown: true,
+			},
+		},
+	))
 	mux := runtime.NewServeMux(options...)
 	for _, register := range c.registers {
 		err := register(ctx, mux, conn)

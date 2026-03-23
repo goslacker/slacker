@@ -11,6 +11,7 @@ import (
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type CustomerHandler struct {
@@ -93,6 +94,19 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 	if len(c.MetadataFuncs) > 0 {
 		c.Options = append(c.Options, runtime.WithMetadata(ChainMetadataFuncs(c.MetadataFuncs...)))
 	}
+
+	c.Options = append(c.Options, runtime.WithMarshalerOption(
+		runtime.MIMEWildcard,
+		&runtime.JSONPb{
+			MarshalOptions: protojson.MarshalOptions{
+				EmitUnpopulated: true,
+				UseEnumNumbers:  true,
+			},
+			UnmarshalOptions: protojson.UnmarshalOptions{
+				DiscardUnknown: true,
+			},
+		},
+	))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	server.defers = append(server.defers, cancel)
