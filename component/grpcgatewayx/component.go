@@ -238,6 +238,51 @@ func (c *Component) Stop() {
 	}
 }
 
+func chainMiddlewares(mws []runtime.Middleware) runtime.Middleware {
+	return func(next runtime.HandlerFunc) runtime.HandlerFunc {
+		for i := len(mws); i > 0; i-- {
+			next = mws[i-1](next)
+		}
+		return next
+	}
+}
+
+// ManualParseGrpcContext 手动解析grpc上下文, 并将上下文设置到http请求上下文
+// 当ctx为nil时, 表示中间件未全部通过, 直接返回.(出错时,中间件自己负责返回响应)
+func (c *Component) ManualParseGrpcContext(w http.ResponseWriter, r *http.Request, pathParams map[string]string) (ctx context.Context) {
+	authMiddleware, err := app.Resolve[*middleware.JwtAuthMiddlewareBuilder]()
+	if err != nil {
+		err = fmt.Errorf("build auth middleware failed: %w", err)
+		return
+	}
+	middleware := chainMiddlewares(append([]runtime.Middleware{
+		middleware.GenLogReqAndRespMiddleware(c.ignoreLogPaths),
+		authMiddleware.Build,
+	}, c.middleware...))
+
+	metaParser := func(ctx context.Context, request *http.Request) metadata.MD {
+		result := make(metadata.MD)
+		for _, v := range c.metadataFunc {
+			md := v(ctx, request)
+			if md == nil {
+				continue
+			}
+			for k, v := range md {
+				result[k] = v
+			}
+		}
+		return result
+	}
+
+	middleware(func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+		ctx = r.Context()
+		meta := metaParser(ctx, r)
+		ctx = metadata.NewIncomingContext(ctx, meta)
+	})(w, r, pathParams)
+
+	return
+}
+
 func RegisterGateway(registers ...func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error) {
 	app.RegisterListener(func(event app.AfterInit) (err error) {
 		gateway := app.MustResolve[*Component]()
