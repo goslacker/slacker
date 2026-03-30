@@ -80,7 +80,7 @@ func GenLogReqAndRespMiddleware(ignores []string) func(next runtime.HandlerFunc)
 				"request log",
 				"req", rMap,
 				"resp", respMap,
-				"time", time.Since(t),
+				"time", time.Since(t).Seconds(),
 			)
 		}
 	}
