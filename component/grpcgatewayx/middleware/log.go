@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 )
@@ -42,6 +43,7 @@ func GenLogReqAndRespMiddleware(ignores []string) func(next runtime.HandlerFunc)
 
 			w = &ResponseLogger{ResponseWriter: w}
 
+			t := time.Now()
 			// 调用下一个处理函数
 			next(w, r, pathParams)
 
@@ -76,10 +78,9 @@ func GenLogReqAndRespMiddleware(ignores []string) func(next runtime.HandlerFunc)
 
 			slog.Debug(
 				"request log",
-				"req",
-				rMap,
-				"resp",
-				respMap,
+				"req", rMap,
+				"resp", respMap,
+				"time", time.Since(t),
 			)
 		}
 	}
