@@ -3,7 +3,6 @@ package middleware
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -81,7 +80,7 @@ func GenLogReqAndRespMiddleware(ignores []string) func(next runtime.HandlerFunc)
 				"request log",
 				"req", rMap,
 				"resp", respMap,
-				"time", fmt.Sprintf("%.4f", time.Since(t).Seconds()),
+				"duration", time.Since(t).String(),
 			)
 		}
 	}
