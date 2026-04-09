@@ -59,19 +59,23 @@ type PaginationCondition interface {
 }
 
 type HolderRepository[PO any, Entity any, Condition any] struct {
-	DB             *DB
+	db             *DB
 	parseCondition func(query *gorm.DB, condition Condition) *gorm.DB
 }
 
 func NewHolderRepository[PO any, Entity any, Condition any](db *DB, parseCondition func(query *gorm.DB, condition Condition) *gorm.DB) *HolderRepository[PO, Entity, Condition] {
 	return &HolderRepository[PO, Entity, Condition]{
-		DB:             db,
+		db:             db,
 		parseCondition: parseCondition,
 	}
 }
 
+func (h *HolderRepository[PO, Entity, Condition]) DB(ctx context.Context) *gorm.DB {
+	return h.db.WithContext(ctx).GetDB()
+}
+
 func (h *HolderRepository[PO, Entity, Condition]) BuildQuery(ctx context.Context, condition Condition) *gorm.DB {
-	query := h.DB.WithContext(ctx).GetDB()
+	query := h.db.WithContext(ctx).GetDB()
 	query = h.parseCondition(query, condition)
 	return query
 }
@@ -81,13 +85,13 @@ func (h *HolderRepository[PO, Entity, Condition]) Save(ctx context.Context, enti
 		return nil
 	}
 	return tool.SimpleMapFuncBack(entities, func(dest []*PO) (err error) {
-		return h.DB.WithContext(ctx).Clauses(clause.OnConflict{UpdateAll: true}).Create(&dest).Error
+		return h.db.WithContext(ctx).Clauses(clause.OnConflict{UpdateAll: true}).Create(&dest).Error
 	})
 }
 
 func (h *HolderRepository[PO, Entity, Condition]) SaveInBatches(ctx context.Context, batchSize int, entities ...*Entity) error {
 	h = &HolderRepository[PO, Entity, Condition]{
-		DB:             NewHolder(h.DB.GetDB().Session(&gorm.Session{CreateBatchSize: batchSize})),
+		db:             NewHolder(h.db.GetDB().Session(&gorm.Session{CreateBatchSize: batchSize})),
 		parseCondition: h.parseCondition,
 	}
 	return h.Save(ctx, entities...)
@@ -157,7 +161,7 @@ func (h *HolderRepository[PO, Entity, Condition]) Pagination(ctx context.Context
 
 func (h *HolderRepository[PO, Entity, Condition]) Update(ctx context.Context, entity *Entity) error {
 	return tool.SimpleMapFuncBack(entity, func(dest *PO) (err error) {
-		return h.DB.GetDB().Updates(dest).Error
+		return h.db.GetDB().Updates(dest).Error
 	})
 }
 
@@ -186,7 +190,7 @@ func (h *HolderRepository[PO, Entity, Condition]) Updates(ctx context.Context, c
 
 func (h *HolderRepository[PO, Entity, Condition]) CreateInBatches(ctx context.Context, batchSize int, entities ...*Entity) error {
 	return tool.SimpleMapFuncBack(entities, func(models []*PO) (err error) {
-		return h.DB.WithContext(ctx).CreateInBatches(models, batchSize).Error
+		return h.db.WithContext(ctx).CreateInBatches(models, batchSize).Error
 	})
 }
 
