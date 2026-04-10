@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/goslacker/slacker/core/reflectx"
+	"golang.org/x/exp/maps"
 )
 
 func Find[T any](s []T, f func(item T) bool) (T, bool) {
@@ -252,4 +253,12 @@ func EqualIgnoreOrder[T comparable](a, b []T) bool {
 		}
 	}
 	return true
+}
+
+func Unique[T comparable](s []T) []T {
+	m := make(map[T]struct{})
+	for _, item := range s {
+		m[item] = struct{}{}
+	}
+	return maps.Keys(m)
 }
