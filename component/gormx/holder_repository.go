@@ -34,7 +34,7 @@ func NewPagination(page int, size int) Pagination {
 }
 
 func (p Pagination) Validate() bool {
-	return p.Page > 0 || p.Size > 0
+	return p.Page > 0 && p.Size > 0
 }
 
 func (p Pagination) Offset() int {
