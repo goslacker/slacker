@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/http/pprof"
 	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -121,43 +120,6 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 		}
 	}
 
-	c.RegisterCustomHandler(
-		CustomerHandler{
-			Method: "GET",
-			Path:   "customer/debug/pprof/",
-			Handler: func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-				pprof.Index(w, r)
-			},
-		},
-		CustomerHandler{
-			Method: "GET",
-			Path:   "customer/debug/pprof/cmdline",
-			Handler: func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-				pprof.Cmdline(w, r)
-			},
-		},
-		CustomerHandler{
-			Method: "GET",
-			Path:   "customer/debug/pprof/profile",
-			Handler: func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-				pprof.Profile(w, r)
-			},
-		},
-		CustomerHandler{
-			Method: "GET",
-			Path:   "customer/debug/pprof/symbol",
-			Handler: func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-				pprof.Symbol(w, r)
-			},
-		},
-		CustomerHandler{
-			Method: "GET",
-			Path:   "customer/debug/pprof/trace",
-			Handler: func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-				pprof.Trace(w, r)
-			},
-		},
-	)
 	for key, handler := range c.CustomHandlers {
 		info := strings.Split(key, "|")
 		err = mux.HandlePath(info[0], info[1], handler)
