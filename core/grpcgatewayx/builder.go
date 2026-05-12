@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
@@ -14,12 +13,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-type CustomerHandler struct {
-	Method  string
-	Path    string
-	Handler runtime.HandlerFunc
-}
-
 type GrpcGatewayBuilder struct {
 	Endpoint       string //grpc连接地址
 	Addr           string //http服务地址
@@ -27,15 +20,15 @@ type GrpcGatewayBuilder struct {
 	Options        []runtime.ServeMuxOption
 	ClientOpts     []grpc.DialOption
 	MetadataFuncs  []MetadataFunc
-	CustomHandlers map[string]runtime.HandlerFunc
+	CustomHandlers map[HandlerKey]runtime.HandlerFunc
 }
 
 func (c *GrpcGatewayBuilder) RegisterCustomHandler(handlers ...CustomerHandler) {
 	if c.CustomHandlers == nil {
-		c.CustomHandlers = make(map[string]runtime.HandlerFunc)
+		c.CustomHandlers = make(map[HandlerKey]runtime.HandlerFunc)
 	}
 	for _, handler := range handlers {
-		c.CustomHandlers[fmt.Sprintf("%s|%s", handler.Method, handler.Path)] = handler.Handler
+		c.CustomHandlers[handler.Key()] = handler.Handler
 	}
 }
 
@@ -121,10 +114,9 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 	}
 
 	for key, handler := range c.CustomHandlers {
-		info := strings.Split(key, "|")
-		err = mux.HandlePath(info[0], info[1], handler)
+		err = mux.HandlePath(key.Method(), key.Path(), handler)
 		if err != nil {
-			err = fmt.Errorf("Failed to set custom handler(info=%+v): %w", info, err)
+			err = fmt.Errorf("Failed to set custom handler(info=%+v): %w", key, err)
 			return
 		}
 	}

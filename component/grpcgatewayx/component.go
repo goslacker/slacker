@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
-	"strings"
 
 	"github.com/goslacker/slacker/component/grpcgatewayx/annotator"
 	"github.com/goslacker/slacker/component/grpcgatewayx/middleware"
@@ -16,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/goslacker/slacker/core/app"
+	"github.com/goslacker/slacker/core/grpcgatewayx"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/rs/cors"
@@ -35,7 +35,7 @@ func WithRegisters(registers ...func(ctx context.Context, mux *runtime.ServeMux,
 
 func NewComponent(opts ...func(*Component)) *Component {
 	c := &Component{
-		handlers:     make(map[string]runtime.HandlerFunc),
+		handlers:     make(map[grpcgatewayx.HandlerKey]runtime.HandlerFunc),
 		metadataFunc: []func(context.Context, *http.Request) metadata.MD{annotator.PassAuthResult},
 	}
 	for _, opt := range opts {
@@ -66,7 +66,7 @@ type Component struct {
 	app.Component
 	cancel                  context.CancelFunc
 	registers               []func(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error
-	handlers                map[string]runtime.HandlerFunc
+	handlers                map[grpcgatewayx.HandlerKey]runtime.HandlerFunc
 	gwServer                *http.Server
 	forwardResponseRewriter runtime.ForwardResponseRewriter
 	errorHandler            runtime.ErrorHandlerFunc
@@ -97,7 +97,12 @@ func (c *Component) Register(registers ...func(ctx context.Context, mux *runtime
 }
 
 func (c *Component) RegisterCustomerHandler(method string, path string, handler runtime.HandlerFunc) {
-	c.handlers[fmt.Sprintf("%s|%s", method, path)] = handler
+	h := grpcgatewayx.CustomerHandler{
+		Method:  method,
+		Path:    path,
+		Handler: handler,
+	}
+	c.handlers[h.Key()] = h.Handler
 }
 
 func (c *Component) RegisterMiddleware(m ...runtime.Middleware) {
@@ -210,8 +215,7 @@ func (c *Component) Start() {
 	}
 
 	for key, handler := range c.handlers {
-		info := strings.Split(key, "|")
-		err := mux.HandlePath(info[0], info[1], handler)
+		err := mux.HandlePath(key.Method(), key.Path(), handler)
 		if err != nil {
 			panic(err)
 		}
