@@ -2,9 +2,10 @@ package container
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestContainer_BindAndResolve(t *testing.T) {
@@ -281,6 +282,47 @@ func TestContainer_BindAndResolve(t *testing.T) {
 
 		require.NotSame(t, s1, s11)
 	})
+
+	t.Run("5.先被解析成结构,后背解析成结构体, 应该只被初始化一次", func(t *testing.T) {
+		count := 0
+		NewA5 := func() *A5 {
+			count++
+			return &A5{}
+		}
+		Bind[*C5](NewC5)
+		Bind[*B5](NewB5)
+		Bind[*A5](NewA5)
+		Resolve[*C5]()
+		require.Equal(t, 1, count)
+	})
+}
+
+type IA5 interface {
+	Key() string
+}
+type A5 struct {
+	key string
+}
+
+func (a *A5) Key() string {
+	return a.key
+}
+
+type B5 struct {
+	a IA5
+}
+
+func NewB5(a IA5) *B5 {
+	return &B5{a: a}
+}
+
+type C5 struct {
+	b *B5
+	a *A5
+}
+
+func NewC5(b *B5, a *A5) *C5 {
+	return &C5{b: b, a: a}
 }
 
 func NewStruct1111(s1113 *Struct1113) *Struct1111 {

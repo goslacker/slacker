@@ -238,10 +238,10 @@ func (c *Container) resolve(ctx context.Context, t reflect.Type, key string) (re
 					ret = rets[0].Convert(t)
 					if prvd.Singleton {
 						c.instancesLock.Lock()
-						if c.instances[t] == nil {
-							c.instances[t] = make(map[string]reflect.Value)
+						if c.instances[typ] == nil {
+							c.instances[typ] = make(map[string]reflect.Value)
 						}
-						c.instances[t][key] = ret
+						c.instances[typ][key] = rets[0]
 						c.instancesLock.Unlock()
 					}
 					return
