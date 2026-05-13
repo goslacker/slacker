@@ -285,7 +285,7 @@ func canBindProvider(t reflect.Type, value reflect.Value) bool {
 		return false
 	}
 
-	if value.Type().NumOut() <= 0 {
+	if value.Type().NumOut() <= 0 || value.Type().NumOut() > 2 {
 		return false
 	}
 

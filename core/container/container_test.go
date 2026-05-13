@@ -283,7 +283,7 @@ func TestContainer_BindAndResolve(t *testing.T) {
 		require.NotSame(t, s1, s11)
 	})
 
-	t.Run("5.先被解析成结构,后背解析成结构体, 应该只被初始化一次", func(t *testing.T) {
+	t.Run("5.先被解析成接口,后背解析成结构体,应该只被初始化一次", func(t *testing.T) {
 		count := 0
 		NewA5 := func() *A5 {
 			count++
@@ -292,6 +292,19 @@ func TestContainer_BindAndResolve(t *testing.T) {
 		Bind[*C5](NewC5)
 		Bind[*B5](NewB5)
 		Bind[*A5](NewA5)
+		Resolve[*C5]()
+		require.Equal(t, 1, count)
+	})
+	t.Run("5.先背解析成结构体,后背解析成接口, 应该只被初始化一次", func(t *testing.T) {
+		count := 0
+		NewA5 := func() *A5 {
+			count++
+			return &A5{}
+		}
+		Bind[*C5](NewC5)
+		Bind[*B5](NewB5)
+		Bind[*A5](NewA5)
+		Resolve[*A5]()
 		Resolve[*C5]()
 		require.Equal(t, 1, count)
 	})
