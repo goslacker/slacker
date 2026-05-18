@@ -21,6 +21,7 @@ type GrpcGatewayBuilder struct {
 	ClientOpts     []grpc.DialOption
 	MetadataFuncs  []MetadataFunc
 	CustomHandlers map[HandlerKey]runtime.HandlerFunc
+	Middlewares    []runtime.Middleware
 }
 
 func (c *GrpcGatewayBuilder) RegisterCustomHandler(handlers ...CustomerHandler) {
@@ -46,6 +47,10 @@ func (c *GrpcGatewayBuilder) SetClientOptions(opts ...grpc.DialOption) {
 
 func (c *GrpcGatewayBuilder) SetMetadataFuncs(fns ...MetadataFunc) {
 	c.MetadataFuncs = append(c.MetadataFuncs, fns...)
+}
+
+func (c *GrpcGatewayBuilder) SetMiddlewares(middlewares ...runtime.Middleware) {
+	c.Middlewares = append(c.Middlewares, middlewares...)
 }
 
 func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
@@ -101,6 +106,10 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 		},
 	))
 
+	if len(c.Middlewares) > 0 {
+		c.Options = append(c.Options, runtime.WithMiddlewares(c.Middlewares...))
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	server.defers = append(server.defers, cancel)
 
@@ -128,6 +137,31 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 	}
 
 	return
+}
+
+// ManualParseGrpcContext 手动解析grpc上下文, 并将上下文设置到http请求上下文
+// 当ctx为nil时, 表示中间件未全部通过, 直接返回.(出错时,中间件自己负责返回响应)
+func (c *GrpcGatewayBuilder) ManualParseGrpcContext(w http.ResponseWriter, r *http.Request, pathParams map[string]string) (ctx context.Context) {
+	middleware := chainMiddlewares(c.Middlewares)
+
+	metaParser := ChainMetadataFuncs(c.MetadataFuncs...)
+
+	middleware(func(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+		ctx = r.Context()
+		meta := metaParser(ctx, r)
+		ctx = metadata.NewIncomingContext(ctx, meta)
+	})(w, r, pathParams)
+
+	return
+}
+
+func chainMiddlewares(mws []runtime.Middleware) runtime.Middleware {
+	return func(next runtime.HandlerFunc) runtime.HandlerFunc {
+		for i := len(mws); i > 0; i-- {
+			next = mws[i-1](next)
+		}
+		return next
+	}
 }
 
 type MetadataFunc func(context.Context, *http.Request) metadata.MD
