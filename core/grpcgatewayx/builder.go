@@ -142,7 +142,7 @@ func (c *GrpcGatewayBuilder) Build() (server *Server, err error) {
 // ManualParseGrpcContext 手动解析grpc上下文, 并将上下文设置到http请求上下文
 // 当ctx为nil时, 表示中间件未全部通过, 直接返回.(出错时,中间件自己负责返回响应)
 func (c *GrpcGatewayBuilder) ManualParseGrpcContext(w http.ResponseWriter, r *http.Request, pathParams map[string]string) (ctx context.Context) {
-	middleware := chainMiddlewares(c.Middlewares)
+	middleware := chainMiddlewares(nil)
 
 	metaParser := ChainMetadataFuncs(c.MetadataFuncs...)
 
