@@ -60,13 +60,13 @@ type PaginationCondition interface {
 
 type HolderRepository[PO any, Entity any, Condition any] struct {
 	db             *DB
-	parseCondition func(query *gorm.DB, condition Condition) *gorm.DB
+	ParseCondition func(query *gorm.DB, condition Condition) *gorm.DB
 }
 
 func NewHolderRepository[PO any, Entity any, Condition any](db *DB, parseCondition func(query *gorm.DB, condition Condition) *gorm.DB) *HolderRepository[PO, Entity, Condition] {
 	return &HolderRepository[PO, Entity, Condition]{
 		db:             db,
-		parseCondition: parseCondition,
+		ParseCondition: parseCondition,
 	}
 }
 
@@ -76,7 +76,7 @@ func (h *HolderRepository[PO, Entity, Condition]) DB(ctx context.Context) *gorm.
 
 func (h *HolderRepository[PO, Entity, Condition]) BuildQuery(ctx context.Context, condition Condition) *gorm.DB {
 	query := h.db.WithContext(ctx).GetDB()
-	query = h.parseCondition(query, condition)
+	query = h.ParseCondition(query, condition)
 	return query
 }
 
@@ -92,7 +92,7 @@ func (h *HolderRepository[PO, Entity, Condition]) Save(ctx context.Context, enti
 func (h *HolderRepository[PO, Entity, Condition]) SaveInBatches(ctx context.Context, batchSize int, entities ...*Entity) error {
 	h = &HolderRepository[PO, Entity, Condition]{
 		db:             NewHolder(h.db.GetDB().Session(&gorm.Session{CreateBatchSize: batchSize})),
-		parseCondition: h.parseCondition,
+		ParseCondition: h.ParseCondition,
 	}
 	return h.Save(ctx, entities...)
 }
