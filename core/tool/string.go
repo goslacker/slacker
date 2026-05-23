@@ -2,6 +2,7 @@ package tool
 
 import (
 	"math/rand"
+	"strings"
 )
 
 // 字符串类型常量
@@ -87,4 +88,17 @@ func RandomString(length int, opts ...func(*RandomStringOption)) string {
 	}
 
 	return string(result)
+}
+
+// ContainsAnySubstring 检查字符串是否包含任意子字符串
+// s: 要检查的字符串
+// substrs: 子字符串列表
+// 返回值: 如果包含任意子字符串则返回true，否则返回false
+func ContainsAnySubstring(s string, substrs []string) bool {
+	for _, sub := range substrs {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
 }
