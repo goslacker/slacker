@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"reflect"
 	"sync"
 	"syscall"
 )
@@ -55,6 +56,8 @@ func (a *App) Boot() (err error) {
 		if m, ok := module.(Bootable); ok {
 			err = m.Boot()
 			if err != nil {
+				t := reflect.TypeOf(module)
+				err = fmt.Errorf("boot failed: %w, module: %s, %s", err, t.Name(), t.String())
 				return
 			}
 		}
