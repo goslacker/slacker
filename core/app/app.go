@@ -70,16 +70,19 @@ func (a *App) Boot() (err error) {
 func (a *App) Run() (n int, err error) {
 	err = a.Init()
 	if err != nil {
+		err = fmt.Errorf("init failed: %w", err)
 		return
 	}
 
 	err = a.Boot()
 	if err != nil {
+		err = fmt.Errorf("boot failed: %w", err)
 		return
 	}
 
 	err = Fire(BeforeRun{})
 	if err != nil {
+		err = fmt.Errorf("before run failed: %w", err)
 		return
 	}
 	for _, m := range a.components {
@@ -94,6 +97,7 @@ func (a *App) Run() (n int, err error) {
 	}
 	err = Fire(AfterRun{})
 	if err != nil {
+		err = fmt.Errorf("after run failed: %w", err)
 		a.Shutdown()
 		return
 	}
